@@ -14,7 +14,134 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      campaigns: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          location: string
+          max_leads: number
+          name: string
+          niche: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          location: string
+          max_leads?: number
+          name: string
+          niche: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          location?: string
+          max_leads?: number
+          name?: string
+          niche?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          address: string | null
+          ai_summary: string | null
+          campaign_id: string
+          category: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          outreach_hooks: Json | null
+          phone: string | null
+          rating: number | null
+          review_count: number | null
+          status: string
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          ai_summary?: string | null
+          campaign_id: string
+          category?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          outreach_hooks?: Json | null
+          phone?: string | null
+          rating?: number | null
+          review_count?: number | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          ai_summary?: string | null
+          campaign_id?: string
+          category?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          outreach_hooks?: Json | null
+          phone?: string | null
+          rating?: number | null
+          review_count?: number | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          agency_name: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          agency_name?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          agency_name?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
