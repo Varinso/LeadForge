@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getCampaign, updateLeadStatus } from "@/lib/campaigns.functions";
+import { getCampaign, updateLeadStatus, generateLeadEmail } from "@/lib/campaigns.functions";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,8 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Download, Loader2, Mail, Phone, ExternalLink, Search } from "lucide-react";
-import { useState, useMemo } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Download, Loader2, Mail, Phone, ExternalLink, Search, Copy, Sparkles, Send } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/campaigns/$id")({
@@ -37,7 +38,10 @@ type Lead = {
   category: string | null;
   ai_summary: string | null;
   outreach_hooks: string[] | null;
+  email_subject: string | null;
+  email_body: string | null;
   status: string;
+
 };
 
 const STATUS_LABELS: Record<string, string> = {
