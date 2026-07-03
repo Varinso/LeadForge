@@ -68,10 +68,41 @@ function CampaignDetail() {
   const { id } = Route.useParams();
   const fetchCampaign = useServerFn(getCampaign);
   const updateStatus = useServerFn(updateLeadStatus);
+  const genEmail = useServerFn(generateLeadEmail);
   const qc = useQueryClient();
   const [selected, setSelected] = useState<Lead | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    setEmailSubject(selected?.email_subject ?? "");
+    setEmailBody(selected?.email_body ?? "");
+  }, [selected]);
+
+  async function handleGenerate() {
+    if (!selected) return;
+    setGenerating(true);
+    try {
+      const res = await genEmail({ data: { id: selected.id } });
+      setEmailSubject(res.email_subject);
+      setEmailBody(res.email_body);
+      qc.invalidateQueries({ queryKey: ["campaign", id] });
+      toast.success("Email draft generated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate email");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function copyEmail() {
+    await navigator.clipboard.writeText(`Subject: ${emailSubject}\n\n${emailBody}`);
+    toast.success("Copied to clipboard");
+  }
+
 
   const query = useQuery({
     queryKey: ["campaign", id],
