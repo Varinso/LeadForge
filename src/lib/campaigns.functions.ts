@@ -124,6 +124,8 @@ export const processCampaign = createServerFn({ method: "POST" })
       const SummarySchema = zod.object({
         summary: zod.string(),
         hooks: zod.array(zod.string()),
+        email_subject: zod.string(),
+        email_body: zod.string(),
       });
 
       for (const biz of businesses) {
@@ -131,13 +133,15 @@ export const processCampaign = createServerFn({ method: "POST" })
 
         let ai_summary: string | null = null;
         let outreach_hooks: string[] | null = null;
+        let email_subject: string | null = null;
+        let email_body: string | null = null;
 
         if (gateway) {
           try {
             const { output } = await generateText({
               model: gateway("google/gemini-3-flash-preview"),
               output: Output.object({ schema: SummarySchema }),
-              prompt: `You are helping a ${campaign.niche} SEO/marketing agency evaluate a potential client.
+              prompt: `You are helping a ${campaign.niche} SEO/marketing agency evaluate and reach out to a potential client.
 
 Business: ${enriched.name}
 Website: ${enriched.website ?? "n/a"}
@@ -146,10 +150,14 @@ Notes/about: ${enriched.about ?? "n/a"}
 
 Return:
 - summary: 3 concise sentences describing what they do, their likely digital-marketing pain points, and the SEO angle to pitch.
-- hooks: 3 short (max 15 words each) personalized cold-outreach opening lines.`,
+- hooks: 3 short (max 15 words each) personalized cold-outreach opening lines.
+- email_subject: a short, specific, non-spammy subject line (max 60 chars). No emojis, no ALL CAPS, no "Re:".
+- email_body: a personalized cold email (90-140 words) in plain text. Structure: a specific personalized opener referencing something real about ${enriched.name}, one sentence naming a concrete SEO/marketing gap you noticed, one sentence on the outcome you'd deliver, then a soft CTA asking for a 15-min call. Sign off as "[Your name]". Use \\n for line breaks. Friendly, direct, no fluff, no fake compliments.`,
             });
             ai_summary = output.summary;
             outreach_hooks = output.hooks;
+            email_subject = output.email_subject;
+            email_body = output.email_body;
           } catch (e) {
             console.error("AI summary failed for", enriched.name, e);
           }
@@ -168,8 +176,11 @@ Return:
           category: enriched.category ?? campaign.niche,
           ai_summary,
           outreach_hooks,
+          email_subject,
+          email_body,
         });
       }
+
 
       await supabaseAdmin
         .from("campaigns")
