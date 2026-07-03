@@ -53,6 +53,74 @@ export type Database = {
         }
         Relationships: []
       }
+      email_sends: {
+        Row: {
+          body: string
+          created_at: string
+          error_message: string | null
+          first_opened_at: string | null
+          gmail_message_id: string | null
+          gmail_thread_id: string | null
+          id: string
+          last_opened_at: string | null
+          lead_id: string
+          open_count: number
+          provider: string
+          replied_at: string | null
+          reply_snippet: string | null
+          sent_at: string
+          subject: string
+          to_email: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          error_message?: string | null
+          first_opened_at?: string | null
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
+          id?: string
+          last_opened_at?: string | null
+          lead_id: string
+          open_count?: number
+          provider?: string
+          replied_at?: string | null
+          reply_snippet?: string | null
+          sent_at?: string
+          subject: string
+          to_email: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          error_message?: string | null
+          first_opened_at?: string | null
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
+          id?: string
+          last_opened_at?: string | null
+          lead_id?: string
+          open_count?: number
+          provider?: string
+          replied_at?: string | null
+          reply_snippet?: string | null
+          sent_at?: string
+          subject?: string
+          to_email?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_sends_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           address: string | null
@@ -145,6 +213,48 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_email_settings: {
+        Row: {
+          created_at: string
+          gmail_access_token: string | null
+          gmail_email: string | null
+          gmail_last_history_id: string | null
+          gmail_refresh_token: string | null
+          gmail_token_expires_at: string | null
+          reply_to: string | null
+          sender_name: string | null
+          signature: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gmail_access_token?: string | null
+          gmail_email?: string | null
+          gmail_last_history_id?: string | null
+          gmail_refresh_token?: string | null
+          gmail_token_expires_at?: string | null
+          reply_to?: string | null
+          sender_name?: string | null
+          signature?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gmail_access_token?: string | null
+          gmail_email?: string | null
+          gmail_last_history_id?: string | null
+          gmail_refresh_token?: string | null
+          gmail_token_expires_at?: string | null
+          reply_to?: string | null
+          sender_name?: string | null
+          signature?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
