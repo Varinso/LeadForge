@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getCampaign, updateLeadStatus } from "@/lib/campaigns.functions";
+import { getCampaign, updateLeadStatus, generateLeadEmail } from "@/lib/campaigns.functions";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,8 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Download, Loader2, Mail, Phone, ExternalLink, Search } from "lucide-react";
-import { useState, useMemo } from "react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Download, Loader2, Mail, Phone, ExternalLink, Search, Copy, Sparkles, Send } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/campaigns/$id")({
@@ -37,7 +38,10 @@ type Lead = {
   category: string | null;
   ai_summary: string | null;
   outreach_hooks: string[] | null;
+  email_subject: string | null;
+  email_body: string | null;
   status: string;
+
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -64,10 +68,41 @@ function CampaignDetail() {
   const { id } = Route.useParams();
   const fetchCampaign = useServerFn(getCampaign);
   const updateStatus = useServerFn(updateLeadStatus);
+  const genEmail = useServerFn(generateLeadEmail);
   const qc = useQueryClient();
   const [selected, setSelected] = useState<Lead | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    setEmailSubject(selected?.email_subject ?? "");
+    setEmailBody(selected?.email_body ?? "");
+  }, [selected]);
+
+  async function handleGenerate() {
+    if (!selected) return;
+    setGenerating(true);
+    try {
+      const res = await genEmail({ data: { id: selected.id } });
+      setEmailSubject(res.email_subject);
+      setEmailBody(res.email_body);
+      qc.invalidateQueries({ queryKey: ["campaign", id] });
+      toast.success("Email draft generated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate email");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function copyEmail() {
+    await navigator.clipboard.writeText(`Subject: ${emailSubject}\n\n${emailBody}`);
+    toast.success("Copied to clipboard");
+  }
+
 
   const query = useQuery({
     queryKey: ["campaign", id],
@@ -317,8 +352,55 @@ function CampaignDetail() {
                     </ul>
                   </div>
                 )}
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Cold email draft
+                    </h4>
+                    <Button size="sm" variant="ghost" onClick={handleGenerate} disabled={generating} className="h-7 gap-1.5 text-xs">
+                      {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                      {emailBody ? "Regenerate" : "Generate"}
+                    </Button>
+                  </div>
+                  {emailBody || emailSubject ? (
+                    <div className="space-y-2">
+                      <Input
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        placeholder="Subject line"
+                        className="text-sm"
+                      />
+                      <Textarea
+                        value={emailBody}
+                        onChange={(e) => setEmailBody(e.target.value)}
+                        rows={10}
+                        className="text-sm leading-relaxed"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={copyEmail} className="gap-1.5">
+                          <Copy className="h-3.5 w-3.5" /> Copy
+                        </Button>
+                        {selected.email && (
+                          <Button size="sm" asChild className="gap-1.5">
+                            <a
+                              href={`mailto:${selected.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
+                            >
+                              <Send className="h-3.5 w-3.5" /> Open in mail
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                      {generating ? "Generating personalized draft…" : "No draft yet. Click Generate to create one."}
+                    </p>
+                  )}
+                </div>
               </div>
             </>
+
           )}
         </SheetContent>
       </Sheet>

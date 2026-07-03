@@ -61,6 +61,8 @@ export type Database = {
           category: string | null
           created_at: string
           email: string | null
+          email_body: string | null
+          email_subject: string | null
           id: string
           name: string
           outreach_hooks: Json | null
@@ -79,6 +81,8 @@ export type Database = {
           category?: string | null
           created_at?: string
           email?: string | null
+          email_body?: string | null
+          email_subject?: string | null
           id?: string
           name: string
           outreach_hooks?: Json | null
@@ -97,6 +101,8 @@ export type Database = {
           category?: string | null
           created_at?: string
           email?: string | null
+          email_body?: string | null
+          email_subject?: string | null
           id?: string
           name?: string
           outreach_hooks?: Json | null

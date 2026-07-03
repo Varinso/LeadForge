@@ -88,6 +88,57 @@ export const updateLeadStatus = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const generateLeadEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: lead, error } = await supabase
+      .from("leads")
+      .select("*, campaigns(niche, location)")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (error || !lead) throw new Error(error?.message ?? "Lead not found");
+
+    const lovableKey = process.env.LOVABLE_API_KEY;
+    if (!lovableKey) throw new Error("AI is not configured");
+
+    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
+    const { generateText, Output } = await import("ai");
+    const { z: zod } = await import("zod");
+    const gateway = createLovableAiGatewayProvider(lovableKey);
+
+    const campaign = (lead as unknown as { campaigns: { niche: string; location: string } }).campaigns;
+
+    const { output } = await generateText({
+      model: gateway("google/gemini-3-flash-preview"),
+      output: Output.object({
+        schema: zod.object({ email_subject: zod.string(), email_body: zod.string() }),
+      }),
+      prompt: `Write a personalized cold email from a ${campaign?.niche ?? "digital marketing"} agency to a potential client.
+
+Business: ${lead.name}
+Website: ${lead.website ?? "n/a"}
+Category: ${lead.category ?? "n/a"}
+Location: ${campaign?.location ?? "n/a"}
+Context: ${lead.ai_summary ?? "n/a"}
+
+Return:
+- email_subject: short, specific, non-spammy (max 60 chars). No emojis, no ALL CAPS.
+- email_body: 90-140 words plain text. Structure: specific personalized opener referencing something real about ${lead.name}, one sentence naming a concrete SEO/marketing gap, one sentence on the outcome you'd deliver, then a soft CTA asking for a 15-min call. Sign off as "[Your name]". Use \\n for line breaks. Friendly, direct, no fluff.`,
+    });
+
+    const { error: upErr } = await supabase
+      .from("leads")
+      .update({ email_subject: output.email_subject, email_body: output.email_body })
+      .eq("id", data.id)
+      .eq("user_id", userId);
+    if (upErr) throw new Error(upErr.message);
+    return { email_subject: output.email_subject, email_body: output.email_body };
+  });
+
+
 // Internal: background scrape+summarize. Uses service role to bypass RLS since
 // this runs after fire-and-forget dispatch. Loaded lazily so client bundle stays clean.
 const ProcessInput = z.object({ campaignId: z.string().uuid() });
@@ -124,6 +175,8 @@ export const processCampaign = createServerFn({ method: "POST" })
       const SummarySchema = zod.object({
         summary: zod.string(),
         hooks: zod.array(zod.string()),
+        email_subject: zod.string(),
+        email_body: zod.string(),
       });
 
       for (const biz of businesses) {
@@ -131,13 +184,15 @@ export const processCampaign = createServerFn({ method: "POST" })
 
         let ai_summary: string | null = null;
         let outreach_hooks: string[] | null = null;
+        let email_subject: string | null = null;
+        let email_body: string | null = null;
 
         if (gateway) {
           try {
             const { output } = await generateText({
               model: gateway("google/gemini-3-flash-preview"),
               output: Output.object({ schema: SummarySchema }),
-              prompt: `You are helping a ${campaign.niche} SEO/marketing agency evaluate a potential client.
+              prompt: `You are helping a ${campaign.niche} SEO/marketing agency evaluate and reach out to a potential client.
 
 Business: ${enriched.name}
 Website: ${enriched.website ?? "n/a"}
@@ -146,10 +201,14 @@ Notes/about: ${enriched.about ?? "n/a"}
 
 Return:
 - summary: 3 concise sentences describing what they do, their likely digital-marketing pain points, and the SEO angle to pitch.
-- hooks: 3 short (max 15 words each) personalized cold-outreach opening lines.`,
+- hooks: 3 short (max 15 words each) personalized cold-outreach opening lines.
+- email_subject: a short, specific, non-spammy subject line (max 60 chars). No emojis, no ALL CAPS, no "Re:".
+- email_body: a personalized cold email (90-140 words) in plain text. Structure: a specific personalized opener referencing something real about ${enriched.name}, one sentence naming a concrete SEO/marketing gap you noticed, one sentence on the outcome you'd deliver, then a soft CTA asking for a 15-min call. Sign off as "[Your name]". Use \\n for line breaks. Friendly, direct, no fluff, no fake compliments.`,
             });
             ai_summary = output.summary;
             outreach_hooks = output.hooks;
+            email_subject = output.email_subject;
+            email_body = output.email_body;
           } catch (e) {
             console.error("AI summary failed for", enriched.name, e);
           }
@@ -168,8 +227,11 @@ Return:
           category: enriched.category ?? campaign.niche,
           ai_summary,
           outreach_hooks,
+          email_subject,
+          email_body,
         });
       }
+
 
       await supabaseAdmin
         .from("campaigns")
