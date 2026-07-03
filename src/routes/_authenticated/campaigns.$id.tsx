@@ -352,8 +352,55 @@ function CampaignDetail() {
                     </ul>
                   </div>
                 )}
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Cold email draft
+                    </h4>
+                    <Button size="sm" variant="ghost" onClick={handleGenerate} disabled={generating} className="h-7 gap-1.5 text-xs">
+                      {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                      {emailBody ? "Regenerate" : "Generate"}
+                    </Button>
+                  </div>
+                  {emailBody || emailSubject ? (
+                    <div className="space-y-2">
+                      <Input
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        placeholder="Subject line"
+                        className="text-sm"
+                      />
+                      <Textarea
+                        value={emailBody}
+                        onChange={(e) => setEmailBody(e.target.value)}
+                        rows={10}
+                        className="text-sm leading-relaxed"
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={copyEmail} className="gap-1.5">
+                          <Copy className="h-3.5 w-3.5" /> Copy
+                        </Button>
+                        {selected.email && (
+                          <Button size="sm" asChild className="gap-1.5">
+                            <a
+                              href={`mailto:${selected.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
+                            >
+                              <Send className="h-3.5 w-3.5" /> Open in mail
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                      {generating ? "Generating personalized draft…" : "No draft yet. Click Generate to create one."}
+                    </p>
+                  )}
+                </div>
               </div>
             </>
+
           )}
         </SheetContent>
       </Sheet>
