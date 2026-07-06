@@ -10,21 +10,39 @@ import { toast } from "sonner";
 import { Target } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : undefined,
+  }),
   component: AuthPage,
 });
 
+// Only allow same-origin relative paths, to avoid open-redirect risk.
+function safeNext(next: string | undefined): string | undefined {
+  if (!next) return undefined;
+  if (!next.startsWith("/") || next.startsWith("//")) return undefined;
+  return next;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const target = safeNext(next);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [agencyName, setAgencyName] = useState("");
 
+  const goNext = () => {
+    if (target) window.location.href = target;
+    else navigate({ to: "/dashboard" });
+  };
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/dashboard" });
+      if (data.user) goNext();
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   async function signIn(e: React.FormEvent) {
@@ -33,32 +51,36 @@ function AuthPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) return toast.error(error.message);
-    navigate({ to: "/dashboard" });
+    goNext();
   }
 
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    const emailRedirectTo = target
+      ? `${window.location.origin}${target}`
+      : window.location.origin;
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo,
         data: { full_name: fullName, agency_name: agencyName },
       },
     });
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Account created! You're signed in.");
-    navigate({ to: "/dashboard" });
+    goNext();
   }
 
   async function signInGoogle() {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
+    const redirect_uri = target
+      ? `${window.location.origin}${target}`
+      : window.location.origin;
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri });
     if (result.error) toast.error(result.error.message);
-    if (!result.redirected && !result.error) navigate({ to: "/dashboard" });
+    if (!result.redirected && !result.error) goNext();
   }
 
   return (
