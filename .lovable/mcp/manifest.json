@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://rfxrardepliadnbkdimg.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "leadforge-mcp",
+      "version": "0.1.0",
+      "title": "LeadForge"
+    },
+    "tools": [
+      {
+        "name": "list_campaigns",
+        "title": "List campaigns",
+        "description": "List the signed-in user's lead-generation campaigns with status and lead count.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_leads",
+        "title": "List leads",
+        "description": "List leads in a campaign, optionally filtered by status. Returns business name, contact info, AI summary, and email draft.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "campaign_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Campaign ID from list_campaigns."
+            },
+            "status": {
+              "description": "Optional status filter.",
+              "type": "string",
+              "enum": [
+                "new",
+                "interested",
+                "contacted",
+                "not_a_fit"
+              ]
+            },
+            "limit": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          "required": [
+            "campaign_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_lead_status",
+        "title": "Update lead status",
+        "description": "Change the status of a lead (new, interested, contacted, not_a_fit).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "lead_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "new",
+                "interested",
+                "contacted",
+                "not_a_fit"
+              ]
+            }
+          },
+          "required": [
+            "lead_id",
+            "status"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_campaign",
+        "title": "Create campaign",
+        "description": "Create a lead-scraping campaign for a niche + location. Scraping and AI enrichment run in the background afterwards.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Human name, e.g. 'Fencing - Austin'."
+            },
+            "niche": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Business type, e.g. 'fencing contractors'."
+            },
+            "location": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "City/region, e.g. 'Austin, TX'."
+            },
+            "max_leads": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 50
+            }
+          },
+          "required": [
+            "name",
+            "niche",
+            "location"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
