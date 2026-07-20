@@ -20,8 +20,6 @@ import { Route as AuthenticatedCampaignsNewRouteImport } from './routes/_authent
 import { Route as AuthenticatedCampaignsIdRouteImport } from './routes/_authenticated/campaigns.$id'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
-import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
-import { Route as ApiPublicTwilioCallStatusRouteImport } from './routes/api/public/twilio/call-status'
 
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
@@ -82,17 +80,6 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicTwilioVoiceRoute = ApiPublicTwilioVoiceRouteImport.update({
-  id: '/api/public/twilio/voice',
-  path: '/api/public/twilio/voice',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicTwilioCallStatusRoute =
-  ApiPublicTwilioCallStatusRouteImport.update({
-    id: '/api/public/twilio/call-status',
-    path: '/api/public/twilio/call-status',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -105,8 +92,6 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/campaigns/$id': typeof AuthenticatedCampaignsIdRoute
   '/campaigns/new': typeof AuthenticatedCampaignsNewRoute
-  '/api/public/twilio/call-status': typeof ApiPublicTwilioCallStatusRoute
-  '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -119,8 +104,6 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/campaigns/$id': typeof AuthenticatedCampaignsIdRoute
   '/campaigns/new': typeof AuthenticatedCampaignsNewRoute
-  '/api/public/twilio/call-status': typeof ApiPublicTwilioCallStatusRoute
-  '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -135,8 +118,6 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/campaigns/$id': typeof AuthenticatedCampaignsIdRoute
   '/_authenticated/campaigns/new': typeof AuthenticatedCampaignsNewRoute
-  '/api/public/twilio/call-status': typeof ApiPublicTwilioCallStatusRoute
-  '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,8 +132,6 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/campaigns/$id'
     | '/campaigns/new'
-    | '/api/public/twilio/call-status'
-    | '/api/public/twilio/voice'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -165,8 +144,6 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/campaigns/$id'
     | '/campaigns/new'
-    | '/api/public/twilio/call-status'
-    | '/api/public/twilio/voice'
   id:
     | '__root__'
     | '/'
@@ -180,8 +157,6 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/campaigns/$id'
     | '/_authenticated/campaigns/new'
-    | '/api/public/twilio/call-status'
-    | '/api/public/twilio/voice'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -193,8 +168,6 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
-  ApiPublicTwilioCallStatusRoute: typeof ApiPublicTwilioCallStatusRoute
-  ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -276,20 +249,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/twilio/voice': {
-      id: '/api/public/twilio/voice'
-      path: '/api/public/twilio/voice'
-      fullPath: '/api/public/twilio/voice'
-      preLoaderRoute: typeof ApiPublicTwilioVoiceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/twilio/call-status': {
-      id: '/api/public/twilio/call-status'
-      path: '/api/public/twilio/call-status'
-      fullPath: '/api/public/twilio/call-status'
-      preLoaderRoute: typeof ApiPublicTwilioCallStatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -318,8 +277,6 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
-  ApiPublicTwilioCallStatusRoute: ApiPublicTwilioCallStatusRoute,
-  ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

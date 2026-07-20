@@ -14,74 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      calls: {
-        Row: {
-          created_at: string
-          direction: string
-          duration_seconds: number | null
-          ended_at: string | null
-          error_code: string | null
-          error_message: string | null
-          from_number: string | null
-          id: string
-          lead_id: string
-          message: string | null
-          recording_url: string | null
-          started_at: string | null
-          status: string
-          to_number: string
-          twilio_call_sid: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          direction?: string
-          duration_seconds?: number | null
-          ended_at?: string | null
-          error_code?: string | null
-          error_message?: string | null
-          from_number?: string | null
-          id?: string
-          lead_id: string
-          message?: string | null
-          recording_url?: string | null
-          started_at?: string | null
-          status?: string
-          to_number: string
-          twilio_call_sid?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          direction?: string
-          duration_seconds?: number | null
-          ended_at?: string | null
-          error_code?: string | null
-          error_message?: string | null
-          from_number?: string | null
-          id?: string
-          lead_id?: string
-          message?: string | null
-          recording_url?: string | null
-          started_at?: string | null
-          status?: string
-          to_number?: string
-          twilio_call_sid?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "calls_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       campaigns: {
         Row: {
           created_at: string
@@ -199,6 +131,8 @@ export type Database = {
           email: string | null
           email_body: string | null
           email_subject: string | null
+          ghl_contact_id: string | null
+          ghl_synced_at: string | null
           id: string
           name: string
           outreach_hooks: Json | null
@@ -219,6 +153,8 @@ export type Database = {
           email?: string | null
           email_body?: string | null
           email_subject?: string | null
+          ghl_contact_id?: string | null
+          ghl_synced_at?: string | null
           id?: string
           name: string
           outreach_hooks?: Json | null
@@ -239,6 +175,8 @@ export type Database = {
           email?: string | null
           email_body?: string | null
           email_subject?: string | null
+          ghl_contact_id?: string | null
+          ghl_synced_at?: string | null
           id?: string
           name?: string
           outreach_hooks?: Json | null
@@ -321,6 +259,33 @@ export type Database = {
           reply_to?: string | null
           sender_name?: string | null
           signature?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_ghl_settings: {
+        Row: {
+          agent_phone: string | null
+          api_key: string
+          created_at: string
+          location_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_phone?: string | null
+          api_key: string
+          created_at?: string
+          location_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_phone?: string | null
+          api_key?: string
+          created_at?: string
+          location_id?: string
           updated_at?: string
           user_id?: string
         }
