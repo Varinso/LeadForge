@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      calls: {
+        Row: {
+          created_at: string
+          direction: string
+          duration_seconds: number | null
+          ended_at: string | null
+          error_code: string | null
+          error_message: string | null
+          from_number: string | null
+          id: string
+          lead_id: string
+          message: string | null
+          recording_url: string | null
+          started_at: string | null
+          status: string
+          to_number: string
+          twilio_call_sid: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          direction?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          from_number?: string | null
+          id?: string
+          lead_id: string
+          message?: string | null
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          to_number: string
+          twilio_call_sid?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          from_number?: string | null
+          id?: string
+          lead_id?: string
+          message?: string | null
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          to_number?: string
+          twilio_call_sid?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calls_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           created_at: string
