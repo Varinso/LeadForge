@@ -26,7 +26,15 @@ export const Route = createFileRoute("/api/public/twilio/call-status")({
         const errorCode = form.get("ErrorCode");
         const errorMessage = form.get("ErrorMessage");
 
-        const patch: Record<string, unknown> = { status };
+        const patch: {
+          status: string;
+          duration_seconds?: number;
+          recording_url?: string;
+          error_code?: string;
+          error_message?: string;
+          started_at?: string;
+          ended_at?: string;
+        } = { status };
         if (duration && !Number.isNaN(duration)) patch.duration_seconds = duration;
         if (recordingUrl) patch.recording_url = String(recordingUrl);
         if (errorCode) patch.error_code = String(errorCode);
