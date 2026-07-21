@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 const SettingsInput = z.object({
-  api_key: z.string().min(10),
+  api_key: z.string().optional(),
   location_id: z.string().min(3),
   agent_phone: z.string().optional().nullable(),
 });
@@ -18,7 +18,6 @@ export const getGhlSettings = createServerFn({ method: "GET" })
       .eq("user_id", userId)
       .maybeSingle();
     if (!data) return null;
-    // Mask the API key when returning to the client.
     return {
       api_key_masked: data.api_key ? `••••${data.api_key.slice(-4)}` : "",
       location_id: data.location_id,
@@ -32,9 +31,22 @@ export const saveGhlSettings = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => SettingsInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+
+    // Preserve existing key if user didn't provide a new one.
+    let apiKey = data.api_key?.trim();
+    if (!apiKey) {
+      const { data: existing } = await supabase
+        .from("user_ghl_settings")
+        .select("api_key")
+        .eq("user_id", userId)
+        .maybeSingle();
+      apiKey = existing?.api_key;
+      if (!apiKey) throw new Error("API key is required");
+    }
+
     const { error } = await supabase.from("user_ghl_settings").upsert({
       user_id: userId,
-      api_key: data.api_key,
+      api_key: apiKey,
       location_id: data.location_id,
       agent_phone: data.agent_phone ?? null,
     });
