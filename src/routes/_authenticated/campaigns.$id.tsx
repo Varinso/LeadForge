@@ -347,6 +347,17 @@ function CampaignDetail() {
                   )}
                 </div>
 
+                {selected.phone && (
+                  <Button
+                    onClick={handleCallViaGhl}
+                    disabled={callLoading}
+                    className="w-full gap-2"
+                  >
+                    {callLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneCall className="h-4 w-4" />}
+                    {selected.ghl_contact_id ? "Open in GoHighLevel & call" : "Send to GoHighLevel & call"}
+                  </Button>
+                )}
+
                 {selected.ai_summary && (
                   <div>
                     <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
