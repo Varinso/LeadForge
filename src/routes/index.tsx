@@ -42,7 +42,8 @@ function Landing() {
             real businesses, extracts contacts, and drafts a personalized outreach angle for each one.
           </p>
           <div className="mt-8 flex justify-center gap-3">
-            <Link to="/auth">
+            <Link to="/auth" search={{ next: undefined }}>
+
               <Button size="lg" className="gap-2">
                 Start a campaign <ArrowRight className="h-4 w-4" />
               </Button>

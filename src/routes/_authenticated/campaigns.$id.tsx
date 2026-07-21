@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCampaign, updateLeadStatus, generateLeadEmail } from "@/lib/campaigns.functions";
+import { syncLeadToGhl } from "@/lib/ghl.functions";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Download, Loader2, Mail, Phone, ExternalLink, Search, Copy, Sparkles, Send } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Mail, Phone, ExternalLink, Search, Copy, Sparkles, Send, PhoneCall } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -41,7 +42,7 @@ type Lead = {
   email_subject: string | null;
   email_body: string | null;
   status: string;
-
+  ghl_contact_id: string | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -69,6 +70,7 @@ function CampaignDetail() {
   const fetchCampaign = useServerFn(getCampaign);
   const updateStatus = useServerFn(updateLeadStatus);
   const genEmail = useServerFn(generateLeadEmail);
+  const pushToGhl = useServerFn(syncLeadToGhl);
   const qc = useQueryClient();
   const [selected, setSelected] = useState<Lead | null>(null);
   const [search, setSearch] = useState("");
@@ -76,6 +78,7 @@ function CampaignDetail() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [callLoading, setCallLoading] = useState(false);
 
   useEffect(() => {
     setEmailSubject(selected?.email_subject ?? "");
@@ -101,6 +104,21 @@ function CampaignDetail() {
   async function copyEmail() {
     await navigator.clipboard.writeText(`Subject: ${emailSubject}\n\n${emailBody}`);
     toast.success("Copied to clipboard");
+  }
+
+  async function handleCallViaGhl() {
+    if (!selected) return;
+    setCallLoading(true);
+    try {
+      const res = await pushToGhl({ data: { lead_id: selected.id } });
+      window.open(res.contact_url, "_blank", "noopener,noreferrer");
+      toast.success("Opened in GoHighLevel — click Call to bridge to your phone");
+      qc.invalidateQueries({ queryKey: ["campaign", id] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to sync to GHL");
+    } finally {
+      setCallLoading(false);
+    }
   }
 
 
@@ -328,6 +346,17 @@ function CampaignDetail() {
                     </div>
                   )}
                 </div>
+
+                {selected.phone && (
+                  <Button
+                    onClick={handleCallViaGhl}
+                    disabled={callLoading}
+                    className="w-full gap-2"
+                  >
+                    {callLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneCall className="h-4 w-4" />}
+                    {selected.ghl_contact_id ? "Open in GoHighLevel & call" : "Send to GoHighLevel & call"}
+                  </Button>
+                )}
 
                 {selected.ai_summary && (
                   <div>
