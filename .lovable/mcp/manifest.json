@@ -156,9 +156,9 @@
         "outputSchema": null
       },
       {
-        "name": "create_call",
-        "title": "Call a lead",
-        "description": "Place an outbound Twilio voice call to a lead's phone. Reads a short message when the lead answers and tracks status via webhook callbacks.",
+        "name": "sync_lead_to_ghl",
+        "title": "Send lead to GoHighLevel",
+        "description": "Upsert a lead as a contact in the user's GoHighLevel location and return the GHL contact URL. Open that URL to place a real human call using GHL's dialer (no AI voice).",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -173,49 +173,6 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
               "description": "Lead ID from list_leads."
-            },
-            "message": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 1000,
-              "description": "Text to speak to the lead when they answer. Keep it under 60 seconds spoken."
-            },
-            "to_override": {
-              "description": "Optional E.164 override if the lead has no phone on file (e.g. +15558675310).",
-              "type": "string"
-            }
-          },
-          "required": [
-            "lead_id",
-            "message"
-          ]
-        },
-        "outputSchema": null
-      },
-      {
-        "name": "list_calls",
-        "title": "List calls",
-        "description": "List voice calls placed to a specific lead, most recent first.",
-        "annotations": {
-          "readOnlyHint": true,
-          "idempotentHint": true,
-          "openWorldHint": false
-        },
-        "inputSchema": {
-          "$schema": "http://json-schema.org/draft-07/schema#",
-          "type": "object",
-          "properties": {
-            "lead_id": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-              "description": "Lead ID from list_leads."
-            },
-            "limit": {
-              "default": 20,
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
             }
           },
           "required": [
