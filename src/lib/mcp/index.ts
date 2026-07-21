@@ -3,11 +3,8 @@ import listCampaignsTool from "./tools/list-campaigns";
 import listLeadsTool from "./tools/list-leads";
 import updateLeadStatusTool from "./tools/update-lead-status";
 import createCampaignTool from "./tools/create-campaign";
-import createCallTool from "./tools/create-call";
-import listCallsTool from "./tools/list-calls";
+import syncLeadToGhlTool from "./tools/sync-lead-to-ghl";
 
-// OAuth issuer MUST be the direct Supabase host (not the .lovable.cloud proxy).
-// Vite inlines VITE_SUPABASE_PROJECT_ID at build time.
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
 export default defineMcp({
@@ -15,7 +12,7 @@ export default defineMcp({
   title: "LeadForge",
   version: "0.1.0",
   instructions:
-    "Tools for LeadForge, a lead-generation workspace for marketing agencies. Use list_campaigns to see the user's campaigns, list_leads to inspect leads (with AI summaries and cold-email drafts), update_lead_status to move a lead through the pipeline, create_campaign to start a new niche+location scrape, create_call to place an outbound Twilio voice call to a lead, and list_calls to see call history and current status for a lead.",
+    "Tools for LeadForge, a lead-gen workspace for marketing agencies. Use list_campaigns, list_leads, update_lead_status, create_campaign, and sync_lead_to_ghl (push a lead into the user's GoHighLevel location and return its contact URL so the caller can place a real human call from GHL).",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
@@ -25,7 +22,6 @@ export default defineMcp({
     listLeadsTool,
     updateLeadStatusTool,
     createCampaignTool,
-    createCallTool,
-    listCallsTool,
+    syncLeadToGhlTool,
   ],
 });
