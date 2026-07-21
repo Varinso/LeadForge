@@ -37,21 +37,19 @@ function SettingsPage() {
   }, [data]);
 
   async function handleSave() {
-    if (!apiKey && !data?.configured) {
-      toast.error("API key is required");
-      return;
-    }
     if (!locationId) {
       toast.error("Location ID is required");
+      return;
+    }
+    if (!apiKey && !data?.configured) {
+      toast.error("API key is required");
       return;
     }
     setSaving(true);
     try {
       await save({
         data: {
-          // If already configured and user didn't retype, reuse the masked marker to signal no change
-          // — but our server requires a real key, so require entry on first save only.
-          api_key: apiKey || "REUSE_EXISTING",
+          api_key: apiKey || undefined,
           location_id: locationId,
           agent_phone: agentPhone || null,
         },
