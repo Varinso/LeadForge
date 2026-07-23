@@ -359,6 +359,8 @@ function CampaignDetail() {
                   </Button>
                 )}
 
+                <CallLogPanel leadId={selected.id} campaignQueryKey={["campaign", id]} />
+
                 {selected.ai_summary && (
                   <div>
                     <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
