@@ -316,7 +316,7 @@ function CampaignDetail() {
       </div>
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl lg:max-w-4xl">
           {selected && (
             <>
               <SheetHeader>
