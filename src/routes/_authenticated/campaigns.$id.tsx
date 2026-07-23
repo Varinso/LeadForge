@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCampaign, updateLeadStatus, generateLeadEmail } from "@/lib/campaigns.functions";
 import { syncLeadToGhl } from "@/lib/ghl.functions";
 import { AppShell } from "@/components/app-shell";
+import { CallLogPanel } from "@/components/call-log-panel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -357,6 +358,8 @@ function CampaignDetail() {
                     {selected.ghl_contact_id ? "Open in GoHighLevel & call" : "Send to GoHighLevel & call"}
                   </Button>
                 )}
+
+                <CallLogPanel leadId={selected.id} campaignQueryKey={["campaign", id]} />
 
                 {selected.ai_summary && (
                   <div>
