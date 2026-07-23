@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      call_logs: {
+        Row: {
+          called_at: string
+          created_at: string
+          disposition: string
+          duration_seconds: number | null
+          id: string
+          lead_id: string
+          notes: string | null
+          recording_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          called_at?: string
+          created_at?: string
+          disposition: string
+          duration_seconds?: number | null
+          id?: string
+          lead_id: string
+          notes?: string | null
+          recording_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          called_at?: string
+          created_at?: string
+          disposition?: string
+          duration_seconds?: number | null
+          id?: string
+          lead_id?: string
+          notes?: string | null
+          recording_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           created_at: string
