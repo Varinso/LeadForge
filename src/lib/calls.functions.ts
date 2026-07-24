@@ -20,7 +20,9 @@ const LogCallInput = z.object({
   notes: z.string().max(4000).optional().nullable(),
   recording_url: z.string().url().optional().nullable(),
   called_at: z.string().datetime().optional(),
+  follow_up_at: z.string().datetime().optional().nullable(),
 });
+
 
 export const logCall = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
