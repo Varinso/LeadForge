@@ -86,22 +86,26 @@ export function CallLogPanel({ leadId, campaignQueryKey }: { leadId: string; cam
           duration_seconds: Number.isFinite(durNum as number) ? (durNum as number) : null,
           notes: notes || null,
           recording_url,
+          follow_up_at: followUp ? new Date(followUp).toISOString() : null,
         },
       });
       toast.success("Call logged");
       setOpen(false);
       setDuration("");
       setNotes("");
+      setFollowUp("");
       setFile(null);
       setDisposition("connected");
       qc.invalidateQueries({ queryKey: ["lead-calls", leadId] });
       qc.invalidateQueries({ queryKey: campaignQueryKey });
+      qc.invalidateQueries({ queryKey: ["calendar-events"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to log call");
     } finally {
       setSaving(false);
     }
   }
+
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this call log?")) return;
