@@ -56,8 +56,10 @@ export function CallLogPanel({ leadId, campaignQueryKey }: { leadId: string; cam
   const [disposition, setDisposition] = useState<(typeof DISPOSITIONS)[number]>("connected");
   const [duration, setDuration] = useState("");
   const [notes, setNotes] = useState("");
+  const [followUp, setFollowUp] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+
 
   const q = useQuery({
     queryKey: ["lead-calls", leadId],
