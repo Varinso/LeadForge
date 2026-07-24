@@ -219,12 +219,18 @@ export function CallLogPanel({ leadId, campaignQueryKey }: { leadId: string; cam
                 </button>
               </div>
               {c.notes && <p className="whitespace-pre-wrap text-sm text-foreground/90">{c.notes}</p>}
+              {c.follow_up_at && (
+                <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                  Follow up {formatDistanceToNow(new Date(c.follow_up_at), { addSuffix: true })}
+                </p>
+              )}
               {c.recording_url && (
                 <div className="mt-2 flex items-center gap-2">
                   <PlayCircle className="h-4 w-4 text-muted-foreground" />
                   <audio controls src={c.recording_url} className="h-8 w-full" />
                 </div>
               )}
+
             </li>
           ))}
         </ul>
