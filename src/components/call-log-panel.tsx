@@ -161,6 +161,16 @@ export function CallLogPanel({ leadId, campaignQueryKey }: { leadId: string; cam
             rows={3}
             className="text-sm"
           />
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-muted-foreground whitespace-nowrap">Follow-up</label>
+            <Input
+              type="datetime-local"
+              value={followUp}
+              onChange={(e) => setFollowUp(e.target.value)}
+              className="h-9 text-sm"
+            />
+          </div>
+
           <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted/40">
             <Upload className="h-3.5 w-3.5" />
             {file ? file.name : "Upload recording (audio file, optional)"}
