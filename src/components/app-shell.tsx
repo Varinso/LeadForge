@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Plus, LogOut, Target, Settings } from "lucide-react";
+import { LayoutDashboard, Plus, LogOut, Target, Settings, Calendar } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
