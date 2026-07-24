@@ -48,10 +48,12 @@ export const logCall = createServerFn({ method: "POST" })
         notes: data.notes ?? null,
         recording_url: data.recording_url ?? null,
         called_at: data.called_at ?? new Date().toISOString(),
+        follow_up_at: data.follow_up_at ?? null,
       })
       .select()
       .single();
     if (error) throw new Error(error.message);
+
 
     // Auto-advance lead status on productive dispositions.
     if (["connected", "booked", "callback_requested"].includes(data.disposition)) {
