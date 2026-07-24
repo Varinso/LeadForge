@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Plus, LogOut, Target, Settings } from "lucide-react";
+import { LayoutDashboard, Plus, LogOut, Target, Settings, Calendar } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
@@ -20,8 +20,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navItems = [
     { to: "/dashboard", label: "Campaigns", icon: LayoutDashboard },
     { to: "/campaigns/new", label: "New campaign", icon: Plus },
+    { to: "/calendar", label: "Calendar", icon: Calendar },
     { to: "/settings", label: "Settings", icon: Settings },
   ] as const;
+
 
   return (
     <div className="flex min-h-screen bg-muted/20">

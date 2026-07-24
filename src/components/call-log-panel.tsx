@@ -56,8 +56,10 @@ export function CallLogPanel({ leadId, campaignQueryKey }: { leadId: string; cam
   const [disposition, setDisposition] = useState<(typeof DISPOSITIONS)[number]>("connected");
   const [duration, setDuration] = useState("");
   const [notes, setNotes] = useState("");
+  const [followUp, setFollowUp] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+
 
   const q = useQuery({
     queryKey: ["lead-calls", leadId],
@@ -84,22 +86,26 @@ export function CallLogPanel({ leadId, campaignQueryKey }: { leadId: string; cam
           duration_seconds: Number.isFinite(durNum as number) ? (durNum as number) : null,
           notes: notes || null,
           recording_url,
+          follow_up_at: followUp ? new Date(followUp).toISOString() : null,
         },
       });
       toast.success("Call logged");
       setOpen(false);
       setDuration("");
       setNotes("");
+      setFollowUp("");
       setFile(null);
       setDisposition("connected");
       qc.invalidateQueries({ queryKey: ["lead-calls", leadId] });
       qc.invalidateQueries({ queryKey: campaignQueryKey });
+      qc.invalidateQueries({ queryKey: ["calendar-events"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to log call");
     } finally {
       setSaving(false);
     }
   }
+
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this call log?")) return;
@@ -155,6 +161,16 @@ export function CallLogPanel({ leadId, campaignQueryKey }: { leadId: string; cam
             rows={3}
             className="text-sm"
           />
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-muted-foreground whitespace-nowrap">Follow-up</label>
+            <Input
+              type="datetime-local"
+              value={followUp}
+              onChange={(e) => setFollowUp(e.target.value)}
+              className="h-9 text-sm"
+            />
+          </div>
+
           <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted/40">
             <Upload className="h-3.5 w-3.5" />
             {file ? file.name : "Upload recording (audio file, optional)"}
@@ -203,12 +219,18 @@ export function CallLogPanel({ leadId, campaignQueryKey }: { leadId: string; cam
                 </button>
               </div>
               {c.notes && <p className="whitespace-pre-wrap text-sm text-foreground/90">{c.notes}</p>}
+              {c.follow_up_at && (
+                <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                  Follow up {formatDistanceToNow(new Date(c.follow_up_at), { addSuffix: true })}
+                </p>
+              )}
               {c.recording_url && (
                 <div className="mt-2 flex items-center gap-2">
                   <PlayCircle className="h-4 w-4 text-muted-foreground" />
                   <audio controls src={c.recording_url} className="h-8 w-full" />
                 </div>
               )}
+
             </li>
           ))}
         </ul>

@@ -1,0 +1,2 @@
+ALTER TABLE public.call_logs ADD COLUMN IF NOT EXISTS follow_up_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS call_logs_follow_up_at_idx ON public.call_logs (user_id, follow_up_at) WHERE follow_up_at IS NOT NULL;
