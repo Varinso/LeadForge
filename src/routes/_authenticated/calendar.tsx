@@ -84,8 +84,64 @@ function toLocalInput(d: Date) {
 
 function CalendarPage() {
   const fetchEvents = useServerFn(listCalendarEvents);
+  const addEvent = useServerFn(createCalendarEvent);
+  const removeEvent = useServerFn(deleteCalendarEvent);
+  const queryClient = useQueryClient();
   const [cursor, setCursor] = useState(() => new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    notes: "",
+    starts_at: toLocalInput(new Date()),
+  });
+
+  function openAdd(day?: Date) {
+    const base = day ?? new Date();
+    const d = new Date(base);
+    if (day) d.setHours(9, 0, 0, 0);
+    setForm({ title: "", notes: "", starts_at: toLocalInput(d) });
+    setOpen(true);
+  }
+
+  async function submitEvent() {
+    if (!form.title.trim()) {
+      toast.error("Give the event a title");
+      return;
+    }
+    setSaving(true);
+    try {
+      await addEvent({
+        data: {
+          title: form.title.trim(),
+          notes: form.notes.trim() || null,
+          starts_at: new Date(form.starts_at).toISOString(),
+          kind: "custom",
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      toast.success("Event added");
+      setOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not add event");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(eventId: string) {
+    try {
+      await removeEvent({ data: { id: eventId } });
+      await queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      toast.success("Event deleted");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete event");
+    }
+  }
+
 
   const range = useMemo(() => {
     const from = startOfWeek(startOfMonth(cursor));
