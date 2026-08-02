@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
   startOfMonth,
@@ -17,37 +17,70 @@ import {
 } from "date-fns";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Phone, CalendarClock, Mail, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Phone,
+  CalendarClock,
+  Mail,
+  Loader2,
+  Plus,
+  Star,
+  Trash2,
+} from "lucide-react";
 import { listCalendarEvents } from "@/lib/calls.functions";
+import { createCalendarEvent, deleteCalendarEvent } from "@/lib/calendar.functions";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
   component: CalendarPage,
   head: () => ({
     meta: [
       { title: "Calendar — LeadForge" },
-      { name: "description", content: "Follow-ups, calls made, and email replies in one calendar view." },
+      { name: "description", content: "Follow-ups, calls made, email replies, and your own events in one calendar." },
       { property: "og:title", content: "Calendar — LeadForge" },
-      { property: "og:description", content: "Track follow-ups, call activity, and replies." },
+      { property: "og:description", content: "Track follow-ups, call activity, replies, and custom events." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
 });
 
 type Event = {
   id: string;
-  kind: "call" | "follow_up" | "reply";
+  kind: "call" | "follow_up" | "reply" | "custom";
   at: string;
   lead_id: string;
   lead_name: string;
   campaign_id: string;
   title: string;
   detail: string | null;
+  event_id?: string;
 };
 
 const KIND_STYLE: Record<Event["kind"], { bg: string; icon: typeof Phone; label: string }> = {
   call: { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", icon: Phone, label: "Call" },
   follow_up: { bg: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", icon: CalendarClock, label: "Follow-up" },
   reply: { bg: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300", icon: Mail, label: "Reply" },
+  custom: { bg: "bg-primary/25 text-foreground", icon: Star, label: "Event" },
 };
+
+function toLocalInput(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 
 function CalendarPage() {
   const fetchEvents = useServerFn(listCalendarEvents);
