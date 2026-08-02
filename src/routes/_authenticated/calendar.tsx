@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
   startOfMonth,
@@ -17,42 +17,131 @@ import {
 } from "date-fns";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Phone, CalendarClock, Mail, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Phone,
+  CalendarClock,
+  Mail,
+  Loader2,
+  Plus,
+  Star,
+  Trash2,
+} from "lucide-react";
 import { listCalendarEvents } from "@/lib/calls.functions";
+import { createCalendarEvent, deleteCalendarEvent } from "@/lib/calendar.functions";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
   component: CalendarPage,
   head: () => ({
     meta: [
       { title: "Calendar — LeadForge" },
-      { name: "description", content: "Follow-ups, calls made, and email replies in one calendar view." },
+      { name: "description", content: "Follow-ups, calls made, email replies, and your own events in one calendar." },
       { property: "og:title", content: "Calendar — LeadForge" },
-      { property: "og:description", content: "Track follow-ups, call activity, and replies." },
+      { property: "og:description", content: "Track follow-ups, call activity, replies, and custom events." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
 });
 
 type Event = {
   id: string;
-  kind: "call" | "follow_up" | "reply";
+  kind: "call" | "follow_up" | "reply" | "custom";
   at: string;
   lead_id: string;
   lead_name: string;
   campaign_id: string;
   title: string;
   detail: string | null;
+  event_id?: string;
 };
 
 const KIND_STYLE: Record<Event["kind"], { bg: string; icon: typeof Phone; label: string }> = {
   call: { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", icon: Phone, label: "Call" },
   follow_up: { bg: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", icon: CalendarClock, label: "Follow-up" },
   reply: { bg: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300", icon: Mail, label: "Reply" },
+  custom: { bg: "bg-primary/25 text-foreground", icon: Star, label: "Event" },
 };
+
+function toLocalInput(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 
 function CalendarPage() {
   const fetchEvents = useServerFn(listCalendarEvents);
+  const addEvent = useServerFn(createCalendarEvent);
+  const removeEvent = useServerFn(deleteCalendarEvent);
+  const queryClient = useQueryClient();
   const [cursor, setCursor] = useState(() => new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    notes: "",
+    starts_at: toLocalInput(new Date()),
+  });
+
+  function openAdd(day?: Date) {
+    const base = day ?? new Date();
+    const d = new Date(base);
+    if (day) d.setHours(9, 0, 0, 0);
+    setForm({ title: "", notes: "", starts_at: toLocalInput(d) });
+    setOpen(true);
+  }
+
+  async function submitEvent() {
+    if (!form.title.trim()) {
+      toast.error("Give the event a title");
+      return;
+    }
+    setSaving(true);
+    try {
+      await addEvent({
+        data: {
+          title: form.title.trim(),
+          notes: form.notes.trim() || null,
+          starts_at: new Date(form.starts_at).toISOString(),
+          kind: "custom",
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      toast.success("Event added");
+      setOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not add event");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(eventId: string) {
+    try {
+      await removeEvent({ data: { id: eventId } });
+      await queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      toast.success("Event deleted");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete event");
+    }
+  }
+
 
   const range = useMemo(() => {
     const from = startOfWeek(startOfMonth(cursor));
@@ -115,11 +204,58 @@ function CalendarPage() {
             <Button variant="outline" size="sm" onClick={() => setCursor(new Date())}>
               Today
             </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-2" onClick={() => openAdd(selectedDay ?? undefined)}>
+                  <Plus className="h-4 w-4" /> Add event
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add event</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ev-title">Title</Label>
+                    <Input
+                      id="ev-title"
+                      value={form.title}
+                      onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                      placeholder="Discovery call with Acme Fencing"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ev-when">Date & time</Label>
+                    <Input
+                      id="ev-when"
+                      type="datetime-local"
+                      value={form.starts_at}
+                      onChange={(e) => setForm((f) => ({ ...f, starts_at: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ev-notes">Notes</Label>
+                    <Textarea
+                      id="ev-notes"
+                      rows={3}
+                      value={form.notes}
+                      onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                      placeholder="Optional details"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={submitEvent} disabled={saving} className="gap-2">
+                    {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save event
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          {(["call", "follow_up", "reply"] as const).map((k) => {
+          {(["call", "follow_up", "reply", "custom"] as const).map((k) => {
             const s = KIND_STYLE[k];
             const Icon = s.icon;
             return (
@@ -128,6 +264,7 @@ function CalendarPage() {
               </span>
             );
           })}
+
           {q.isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
         </div>
 
@@ -197,9 +334,22 @@ function CalendarPage() {
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${s.bg}`}>
                         <Icon className="h-3 w-3" /> {s.label}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {format(parseISO(e.at), "p")}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">
+                          {format(parseISO(e.at), "p")}
+                        </span>
+                        {e.event_id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => handleDelete(e.event_id as string)}
+                            aria-label="Delete event"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <div className="text-sm font-medium">{e.lead_name}</div>
                     {e.detail && (
@@ -218,6 +368,17 @@ function CalendarPage() {
                 );
               })}
             </ul>
+            {selectedDay && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 w-full gap-2"
+                onClick={() => openAdd(selectedDay)}
+              >
+                <Plus className="h-4 w-4" /> Add event this day
+              </Button>
+            )}
+
           </aside>
         </div>
       </div>
