@@ -194,7 +194,22 @@ export const listCalendarEvents = createServerFn({ method: "POST" })
         detail: r.subject,
       });
     }
+    for (const r of customRes.data ?? []) {
+      const lead = r.lead_id ? leadMap[r.lead_id] : undefined;
+      events.push({
+        id: `custom-${r.id}`,
+        event_id: r.id,
+        kind: "custom",
+        at: r.starts_at,
+        lead_id: r.lead_id ?? "",
+        lead_name: lead?.name ?? r.title,
+        campaign_id: lead?.campaign_id ?? "",
+        title: r.title,
+        detail: r.notes,
+      });
+    }
     events.sort((a, b) => a.at.localeCompare(b.at));
+
     return events;
   });
 
