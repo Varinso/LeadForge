@@ -334,9 +334,22 @@ function CalendarPage() {
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${s.bg}`}>
                         <Icon className="h-3 w-3" /> {s.label}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {format(parseISO(e.at), "p")}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">
+                          {format(parseISO(e.at), "p")}
+                        </span>
+                        {e.event_id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => handleDelete(e.event_id as string)}
+                            aria-label="Delete event"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <div className="text-sm font-medium">{e.lead_name}</div>
                     {e.detail && (
@@ -355,6 +368,17 @@ function CalendarPage() {
                 );
               })}
             </ul>
+            {selectedDay && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 w-full gap-2"
+                onClick={() => openAdd(selectedDay)}
+              >
+                <Plus className="h-4 w-4" /> Add event this day
+              </Button>
+            )}
+
           </aside>
         </div>
       </div>
