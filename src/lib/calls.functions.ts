@@ -144,14 +144,16 @@ export const listCalendarEvents = createServerFn({ method: "POST" })
 
     type Event = {
       id: string;
-      kind: "call" | "follow_up" | "reply";
+      kind: "call" | "follow_up" | "reply" | "custom";
       at: string;
       lead_id: string;
       lead_name: string;
       campaign_id: string;
       title: string;
       detail: string | null;
+      event_id?: string;
     };
+
     const events: Event[] = [];
     for (const r of callsRes.data ?? []) {
       const lead = leadMap[r.lead_id];
