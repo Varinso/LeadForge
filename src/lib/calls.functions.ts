@@ -94,7 +94,7 @@ export const listCalendarEvents = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    const [callsRes, followRes, repliesRes] = await Promise.all([
+    const [callsRes, followRes, repliesRes, customRes] = await Promise.all([
       supabase
         .from("call_logs")
         .select("id, lead_id, disposition, duration_seconds, notes, called_at")
@@ -115,6 +115,12 @@ export const listCalendarEvents = createServerFn({ method: "POST" })
         .not("replied_at", "is", null)
         .gte("replied_at", data.from)
         .lte("replied_at", data.to),
+      supabase
+        .from("calendar_events")
+        .select("id, lead_id, title, notes, starts_at")
+        .eq("user_id", userId)
+        .gte("starts_at", data.from)
+        .lte("starts_at", data.to),
     ]);
     if (callsRes.error) throw new Error(callsRes.error.message);
     if (followRes.error) throw new Error(followRes.error.message);
@@ -124,6 +130,8 @@ export const listCalendarEvents = createServerFn({ method: "POST" })
     (callsRes.data ?? []).forEach((r) => leadIds.add(r.lead_id));
     (followRes.data ?? []).forEach((r) => leadIds.add(r.lead_id));
     (repliesRes.data ?? []).forEach((r) => leadIds.add(r.lead_id));
+    (customRes.data ?? []).forEach((r) => r.lead_id && leadIds.add(r.lead_id));
+
 
     let leadMap: Record<string, { name: string; campaign_id: string; phone: string | null; email: string | null }> = {};
     if (leadIds.size > 0) {
