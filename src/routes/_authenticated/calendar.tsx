@@ -204,11 +204,58 @@ function CalendarPage() {
             <Button variant="outline" size="sm" onClick={() => setCursor(new Date())}>
               Today
             </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="gap-2" onClick={() => openAdd(selectedDay ?? undefined)}>
+                  <Plus className="h-4 w-4" /> Add event
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add event</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ev-title">Title</Label>
+                    <Input
+                      id="ev-title"
+                      value={form.title}
+                      onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                      placeholder="Discovery call with Acme Fencing"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ev-when">Date & time</Label>
+                    <Input
+                      id="ev-when"
+                      type="datetime-local"
+                      value={form.starts_at}
+                      onChange={(e) => setForm((f) => ({ ...f, starts_at: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ev-notes">Notes</Label>
+                    <Textarea
+                      id="ev-notes"
+                      rows={3}
+                      value={form.notes}
+                      onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                      placeholder="Optional details"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={submitEvent} disabled={saving} className="gap-2">
+                    {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save event
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          {(["call", "follow_up", "reply"] as const).map((k) => {
+          {(["call", "follow_up", "reply", "custom"] as const).map((k) => {
             const s = KIND_STYLE[k];
             const Icon = s.icon;
             return (
@@ -217,6 +264,7 @@ function CalendarPage() {
               </span>
             );
           })}
+
           {q.isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
         </div>
 
