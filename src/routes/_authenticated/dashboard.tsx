@@ -106,7 +106,30 @@ function StatCard({
 function Dashboard() {
   const fetchCampaigns = useServerFn(listCampaigns);
   const fetchStats = useServerFn(getDashboardStats);
+  const removeCampaign = useServerFn(deleteCampaign);
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await removeCampaign({ data: { id: pendingDelete.id } });
+      toast.success(`Deleted "${pendingDelete.name}"`);
+      setPendingDelete(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["campaigns"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] }),
+      ]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete campaign");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
 
   const query = useQuery({
     queryKey: ["campaigns"],
