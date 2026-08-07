@@ -1,11 +1,23 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { listCampaigns } from "@/lib/campaigns.functions";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
+import { listCampaigns, deleteCampaign } from "@/lib/campaigns.functions";
 import { getDashboardStats } from "@/lib/stats.functions";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Plus,
   ArrowRight,
@@ -15,6 +27,7 @@ import {
   CalendarCheck,
   TrendingUp,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { formatDistanceToNow, format, parseISO } from "date-fns";
 
@@ -93,7 +106,30 @@ function StatCard({
 function Dashboard() {
   const fetchCampaigns = useServerFn(listCampaigns);
   const fetchStats = useServerFn(getDashboardStats);
+  const removeCampaign = useServerFn(deleteCampaign);
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await removeCampaign({ data: { id: pendingDelete.id } });
+      toast.success(`Deleted "${pendingDelete.name}"`);
+      setPendingDelete(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["campaigns"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] }),
+      ]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete campaign");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
 
   const query = useQuery({
     queryKey: ["campaigns"],
@@ -211,35 +247,49 @@ function Dashboard() {
                 {query.data?.map((c) => {
                   const leadCount = (c.leads as unknown as Array<{ count: number }>)?.[0]?.count ?? 0;
                   return (
-                    <Link
+                    <div
                       key={c.id}
-                      to="/campaigns/$id"
-                      params={{ id: c.id }}
-                      onMouseEnter={() =>
-                        router.preloadRoute({ to: "/campaigns/$id", params: { id: c.id } })
-                      }
-                      className="group flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-muted/50"
+                      className="group flex items-center justify-between gap-2 px-5 py-4 transition-colors hover:bg-muted/50"
                     >
-                      <div className="min-w-0">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <h3 className="truncate font-medium">{c.name}</h3>
-                          <Badge variant="secondary" className={statusColor(c.status)}>
-                            {c.status === "scraping" && (
-                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                            )}
-                            {c.status}
-                          </Badge>
+                      <Link
+                        to="/campaigns/$id"
+                        params={{ id: c.id }}
+                        onMouseEnter={() =>
+                          router.preloadRoute({ to: "/campaigns/$id", params: { id: c.id } })
+                        }
+                        className="flex min-w-0 flex-1 items-center justify-between gap-4"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <h3 className="truncate font-medium">{c.name}</h3>
+                            <Badge variant="secondary" className={statusColor(c.status)}>
+                              {c.status === "scraping" && (
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              )}
+                              {c.status}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 truncate text-sm text-muted-foreground">
+                            {c.niche} · {c.location} · {leadCount}/{c.max_leads} leads ·{" "}
+                            {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                          </p>
                         </div>
-                        <p className="mt-1 truncate text-sm text-muted-foreground">
-                          {c.niche} · {c.location} · {leadCount}/{c.max_leads} leads ·{" "}
-                          {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
-                        </p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                    </Link>
+                        <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Delete campaign ${c.name}`}
+                        className="shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => setPendingDelete({ id: c.id, name: c.name })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   );
                 })}
               </div>
+
             </div>
           </div>
 
@@ -296,6 +346,34 @@ function Dashboard() {
           </aside>
         </div>
       </div>
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{pendingDelete?.name}" and all of its leads, call logs, and email history will be
+              permanently removed. This can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmDelete();
+              }}
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
+
