@@ -67,6 +67,51 @@ export const getCampaign = createServerFn({ method: "GET" })
     return { campaign, leads: leads ?? [] };
   });
 
+export const deleteCampaign = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: campaign, error: findErr } = await supabase
+      .from("campaigns")
+      .select("id")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (findErr || !campaign) throw new Error("Campaign not found");
+
+    const { data: leads } = await supabase
+      .from("leads")
+      .select("id")
+      .eq("campaign_id", data.id)
+      .eq("user_id", userId);
+    const leadIds = (leads ?? []).map((l) => l.id);
+
+    if (leadIds.length > 0) {
+      await supabase.from("call_logs").delete().in("lead_id", leadIds).eq("user_id", userId);
+      await supabase.from("email_sends").delete().in("lead_id", leadIds).eq("user_id", userId);
+      await supabase
+        .from("calendar_events")
+        .delete()
+        .in("lead_id", leadIds)
+        .eq("user_id", userId);
+      const { error: leadErr } = await supabase
+        .from("leads")
+        .delete()
+        .in("id", leadIds)
+        .eq("user_id", userId);
+      if (leadErr) throw new Error(leadErr.message);
+    }
+
+    const { error } = await supabase
+      .from("campaigns")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const updateLeadStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
