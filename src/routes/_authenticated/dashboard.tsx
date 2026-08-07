@@ -1,11 +1,23 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { listCampaigns } from "@/lib/campaigns.functions";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
+import { listCampaigns, deleteCampaign } from "@/lib/campaigns.functions";
 import { getDashboardStats } from "@/lib/stats.functions";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Plus,
   ArrowRight,
@@ -15,6 +27,7 @@ import {
   CalendarCheck,
   TrendingUp,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { formatDistanceToNow, format, parseISO } from "date-fns";
 
