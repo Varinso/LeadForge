@@ -1,7 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getCampaign, updateLeadStatus, generateLeadEmail } from "@/lib/campaigns.functions";
+import {
+  getCampaign,
+  updateLeadStatus,
+  generateLeadEmail,
+  scoreCampaignLeads,
+} from "@/lib/campaigns.functions";
+import { ScoreBadge } from "@/components/score-badge";
 import { syncLeadToGhl } from "@/lib/ghl.functions";
 import { AppShell } from "@/components/app-shell";
 import { CallLogPanel } from "@/components/call-log-panel";
@@ -23,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Download, Loader2, Mail, Phone, ExternalLink, Search, Copy, Sparkles, Send, PhoneCall } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Mail, Phone, ExternalLink, Search, Copy, Sparkles, Send, PhoneCall, Gauge } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -44,6 +50,9 @@ type Lead = {
   email_body: string | null;
   status: string;
   ghl_contact_id: string | null;
+  lead_score: number | null;
+  score_tier: string | null;
+  score_reasons: string[] | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -80,6 +89,25 @@ function CampaignDetail() {
   const [emailBody, setEmailBody] = useState("");
   const [generating, setGenerating] = useState(false);
   const [callLoading, setCallLoading] = useState(false);
+  const [scoring, setScoring] = useState(false);
+  const [tierFilter, setTierFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"score" | "recent">("score");
+  const runScoring = useServerFn(scoreCampaignLeads);
+
+  async function handleScoreLeads(rescoreAll: boolean) {
+    setScoring(true);
+    try {
+      const res = await runScoring({ data: { campaign_id: id, rescore_all: rescoreAll } });
+      if (res.total === 0) toast.info("All leads are already scored");
+      else toast.success(`Scored ${res.scored} lead${res.scored === 1 ? "" : "s"}`);
+      qc.invalidateQueries({ queryKey: ["campaign", id] });
+      qc.invalidateQueries({ queryKey: ["top-prospects"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to score leads");
+    } finally {
+      setScoring(false);
+    }
+  }
 
   useEffect(() => {
     setEmailSubject(selected?.email_subject ?? "");
@@ -134,8 +162,9 @@ function CampaignDetail() {
 
   const filtered = useMemo(() => {
     const leads = (query.data?.leads ?? []) as Lead[];
-    return leads.filter((l) => {
+    const rows = leads.filter((l) => {
       if (statusFilter !== "all" && l.status !== statusFilter) return false;
+      if (tierFilter !== "all" && (l.score_tier ?? "unscored") !== tierFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         return (
@@ -146,7 +175,11 @@ function CampaignDetail() {
       }
       return true;
     });
-  }, [query.data, search, statusFilter]);
+    if (sortBy === "score") {
+      rows.sort((a, b) => (b.lead_score ?? -1) - (a.lead_score ?? -1));
+    }
+    return rows;
+  }, [query.data, search, statusFilter, tierFilter, sortBy]);
 
   async function changeStatus(lead: Lead, status: string) {
     try {
@@ -160,8 +193,10 @@ function CampaignDetail() {
   function exportCsv() {
     const leads = (query.data?.leads ?? []) as Lead[];
     const rows = [
-      ["Name", "Phone", "Email", "Website", "Status", "AI Summary"],
+      ["Score", "Tier", "Name", "Phone", "Email", "Website", "Status", "AI Summary"],
       ...leads.map((l) => [
+        l.lead_score ?? "",
+        l.score_tier ?? "",
         l.name,
         l.phone ?? "",
         l.email ?? "",
@@ -216,9 +251,25 @@ function CampaignDetail() {
                 <p className="mt-2 text-sm text-destructive">{campaign.error_message}</p>
               )}
             </div>
-            <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2">
-              <Download className="h-4 w-4" /> Export CSV
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleScoreLeads(true)}
+                disabled={scoring}
+                className="gap-2"
+              >
+                {scoring ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Gauge className="h-4 w-4" />
+                )}
+                Score leads
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2">
+                <Download className="h-4 w-4" /> Export CSV
+              </Button>
+            </div>
           </div>
         )}
 
@@ -232,6 +283,28 @@ function CampaignDetail() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <Select value={tierFilter} onValueChange={setTierFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All scores</SelectItem>
+              <SelectItem value="hot">Hot (80+)</SelectItem>
+              <SelectItem value="warm">Warm (60-79)</SelectItem>
+              <SelectItem value="cool">Cool (40-59)</SelectItem>
+              <SelectItem value="cold">Cold (&lt;40)</SelectItem>
+              <SelectItem value="unscored">Unscored</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as "score" | "recent")}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="score">Sort: Lead score</SelectItem>
+              <SelectItem value="recent">Sort: Newest</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-44">
               <SelectValue />
@@ -249,6 +322,7 @@ function CampaignDetail() {
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
+                <th className="px-4 py-3 font-medium">Score</th>
                 <th className="px-4 py-3 font-medium">Business</th>
                 <th className="px-4 py-3 font-medium">Contact</th>
                 <th className="px-4 py-3 font-medium">AI Summary</th>
@@ -262,6 +336,9 @@ function CampaignDetail() {
                   onClick={() => setSelected(lead)}
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/30"
                 >
+                  <td className="px-4 py-3">
+                    <ScoreBadge score={lead.lead_score} tier={lead.score_tier} />
+                  </td>
                   <td className="px-4 py-3">
                     <div className="font-medium">{lead.name}</div>
                     {lead.website && (
@@ -299,7 +376,7 @@ function CampaignDetail() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-16 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-4 py-16 text-center text-muted-foreground">
                     {isScraping ? (
                       <div className="flex flex-col items-center gap-2">
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -360,6 +437,27 @@ function CampaignDetail() {
                 )}
 
                 <CallLogPanel leadId={selected.id} campaignQueryKey={["campaign", id]} />
+
+                {selected.lead_score !== null && selected.lead_score !== undefined && (
+                  <div className="rounded-xl border border-border bg-muted/30 p-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Lead score
+                      </h4>
+                      <ScoreBadge score={selected.lead_score} tier={selected.score_tier} />
+                    </div>
+                    {selected.score_reasons && selected.score_reasons.length > 0 && (
+                      <ul className="mt-3 space-y-1.5 text-sm">
+                        {selected.score_reasons.map((r, i) => (
+                          <li key={i} className="flex gap-2">
+                            <span className="text-primary">•</span>
+                            <span>{r}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
 
                 {selected.ai_summary && (
                   <div>

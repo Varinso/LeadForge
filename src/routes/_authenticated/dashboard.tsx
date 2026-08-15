@@ -143,6 +143,7 @@ function Dashboard() {
   });
 
   const statsQuery = useQuery({ queryKey: ["dashboard-stats"], queryFn: () => fetchStats() });
+  const prospects = useQuery({ queryKey: ["top-prospects"], queryFn: () => fetchProspects() });
   const s = statsQuery.data;
 
   const statuses = s?.statusCounts ?? {};
