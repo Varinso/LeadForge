@@ -103,3 +103,22 @@ export const getDashboardStats = createServerFn({ method: "GET" })
         .slice(0, 6),
     };
   });
+
+/** Highest-scoring leads that haven't been worked yet — "who to call next". */
+export const getTopProspects = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data, error } = await supabase
+      .from("leads")
+      .select(
+        "id, name, campaign_id, phone, email, website, status, lead_score, score_tier, score_reasons, ai_summary",
+      )
+      .eq("user_id", userId)
+      .in("status", ["new", "interested"])
+      .not("lead_score", "is", null)
+      .order("lead_score", { ascending: false })
+      .limit(8);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
