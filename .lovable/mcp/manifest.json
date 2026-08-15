@@ -35,7 +35,7 @@
       {
         "name": "list_leads",
         "title": "List leads",
-        "description": "List leads in a campaign, optionally filtered by status. Returns business name, contact info, AI summary, and email draft.",
+        "description": "List leads in a campaign, optionally filtered by status. Returns business name, contact info, AI summary, lead score (0-100 with hot/warm/cool/cold tier) and email draft. Ranked best-fit first.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
