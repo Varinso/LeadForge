@@ -63,6 +63,7 @@ export const getCampaign = createServerFn({ method: "GET" })
       .from("leads")
       .select("*")
       .eq("campaign_id", data.id)
+      .order("lead_score", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
     return { campaign, leads: leads ?? [] };
   });
@@ -259,6 +260,31 @@ Return:
           }
         }
 
+        let lead_score: number | null = null;
+        let score_tier: string | null = null;
+        let score_reasons: string[] | null = null;
+        try {
+          const { scoreBusiness } = await import("@/lib/scoring.server");
+          const scored = await scoreBusiness({
+            name: enriched.name,
+            website: enriched.website,
+            email: enriched.email,
+            phone: enriched.phone,
+            category: enriched.category ?? campaign.niche,
+            rating: enriched.rating,
+            review_count: enriched.review_count,
+            about: enriched.about,
+            ai_summary,
+            niche: campaign.niche,
+            location: campaign.location,
+          });
+          lead_score = scored.score;
+          score_tier = scored.tier;
+          score_reasons = scored.reasons;
+        } catch (e) {
+          console.error("scoring failed for", enriched.name, e);
+        }
+
         await supabaseAdmin.from("leads").insert({
           campaign_id: campaign.id,
           user_id: campaign.user_id,
@@ -274,6 +300,10 @@ Return:
           outreach_hooks,
           email_subject,
           email_body,
+          lead_score,
+          score_tier,
+          score_reasons,
+          scored_at: lead_score === null ? null : new Date().toISOString(),
         });
       }
 
@@ -294,4 +324,67 @@ Return:
     }
 
     return { ok: true };
+  });
+
+
+const ScoreInput = z.object({
+  campaign_id: z.string().uuid(),
+  rescore_all: z.boolean().default(false),
+});
+
+/** Score (or re-score) the leads in a campaign so they can be ranked. */
+export const scoreCampaignLeads = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => ScoreInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: campaign } = await supabase
+      .from("campaigns")
+      .select("id, niche, location")
+      .eq("id", data.campaign_id)
+      .eq("user_id", userId)
+      .single();
+    if (!campaign) throw new Error("Campaign not found");
+
+    let q = supabase
+      .from("leads")
+      .select("*")
+      .eq("campaign_id", data.campaign_id)
+      .eq("user_id", userId);
+    if (!data.rescore_all) q = q.is("lead_score", null);
+    const { data: leads, error } = await q.limit(60);
+    if (error) throw new Error(error.message);
+
+    const { scoreBusiness } = await import("@/lib/scoring.server");
+    let scored = 0;
+    for (const lead of leads ?? []) {
+      try {
+        const result = await scoreBusiness({
+          name: lead.name,
+          website: lead.website,
+          email: lead.email,
+          phone: lead.phone,
+          category: lead.category,
+          rating: lead.rating,
+          review_count: lead.review_count,
+          ai_summary: lead.ai_summary,
+          niche: campaign.niche,
+          location: campaign.location,
+        });
+        await supabase
+          .from("leads")
+          .update({
+            lead_score: result.score,
+            score_tier: result.tier,
+            score_reasons: result.reasons,
+            scored_at: new Date().toISOString(),
+          })
+          .eq("id", lead.id)
+          .eq("user_id", userId);
+        scored += 1;
+      } catch (e) {
+        console.error("score lead failed", lead.id, e);
+      }
+    }
+    return { scored, total: (leads ?? []).length };
   });
