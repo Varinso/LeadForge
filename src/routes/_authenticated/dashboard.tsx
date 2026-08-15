@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { listCampaigns, deleteCampaign } from "@/lib/campaigns.functions";
-import { getDashboardStats } from "@/lib/stats.functions";
+import { getDashboardStats, getTopProspects } from "@/lib/stats.functions";
+import { ScoreBadge } from "@/components/score-badge";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -106,6 +107,7 @@ function StatCard({
 function Dashboard() {
   const fetchCampaigns = useServerFn(listCampaigns);
   const fetchStats = useServerFn(getDashboardStats);
+  const fetchProspects = useServerFn(getTopProspects);
   const removeCampaign = useServerFn(deleteCampaign);
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -141,6 +143,7 @@ function Dashboard() {
   });
 
   const statsQuery = useQuery({ queryKey: ["dashboard-stats"], queryFn: () => fetchStats() });
+  const prospects = useQuery({ queryKey: ["top-prospects"], queryFn: () => fetchProspects() });
   const s = statsQuery.data;
 
   const statuses = s?.statusCounts ?? {};
@@ -294,6 +297,36 @@ function Dashboard() {
           </div>
 
           <aside className="space-y-6">
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <h2 className="mb-1 text-sm font-semibold">Suggested prospects</h2>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Highest-scoring leads you haven't worked yet.
+              </p>
+              {(prospects.data ?? []).length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No scored leads yet. Open a campaign and run "Score leads".
+                </p>
+              )}
+              <div className="space-y-2">
+                {(prospects.data ?? []).map((p) => (
+                  <Link
+                    key={p.id}
+                    to="/campaigns/$id"
+                    params={{ id: p.campaign_id }}
+                    className="flex items-start justify-between gap-3 rounded-xl border border-border/60 p-3 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{p.name}</div>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                        {(p.score_reasons as string[] | null)?.[0] ?? p.ai_summary ?? "—"}
+                      </p>
+                    </div>
+                    <ScoreBadge score={p.lead_score} tier={p.score_tier} />
+                  </Link>
+                ))}
+              </div>
+            </div>
+
             <div className="rounded-2xl border border-border bg-card p-5">
               <h2 className="mb-3 text-sm font-semibold">Upcoming</h2>
               {(!s || s.upcoming.length === 0) && (

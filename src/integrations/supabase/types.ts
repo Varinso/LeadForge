@@ -231,11 +231,15 @@ export type Database = {
           ghl_contact_id: string | null
           ghl_synced_at: string | null
           id: string
+          lead_score: number | null
           name: string
           outreach_hooks: Json | null
           phone: string | null
           rating: number | null
           review_count: number | null
+          score_reasons: Json | null
+          score_tier: string | null
+          scored_at: string | null
           status: string
           updated_at: string
           user_id: string
@@ -253,11 +257,15 @@ export type Database = {
           ghl_contact_id?: string | null
           ghl_synced_at?: string | null
           id?: string
+          lead_score?: number | null
           name: string
           outreach_hooks?: Json | null
           phone?: string | null
           rating?: number | null
           review_count?: number | null
+          score_reasons?: Json | null
+          score_tier?: string | null
+          scored_at?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -275,11 +283,15 @@ export type Database = {
           ghl_contact_id?: string | null
           ghl_synced_at?: string | null
           id?: string
+          lead_score?: number | null
           name?: string
           outreach_hooks?: Json | null
           phone?: string | null
           rating?: number | null
           review_count?: number | null
+          score_reasons?: Json | null
+          score_tier?: string | null
+          scored_at?: string | null
           status?: string
           updated_at?: string
           user_id?: string

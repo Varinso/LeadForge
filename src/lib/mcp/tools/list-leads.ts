@@ -13,7 +13,7 @@ export default defineTool({
   name: "list_leads",
   title: "List leads",
   description:
-    "List leads in a campaign, optionally filtered by status. Returns business name, contact info, AI summary, and email draft.",
+    "List leads in a campaign, optionally filtered by status. Returns business name, contact info, AI summary, lead score (0-100 with hot/warm/cool/cold tier) and email draft. Ranked best-fit first.",
   inputSchema: {
     campaign_id: z.string().uuid().describe("Campaign ID from list_campaigns."),
     status: z
@@ -31,10 +31,10 @@ export default defineTool({
     let q = supabase
       .from("leads")
       .select(
-        "id, name, phone, email, website, address, rating, review_count, category, ai_summary, outreach_hooks, email_subject, email_body, status, created_at",
+        "id, name, phone, email, website, address, rating, review_count, category, ai_summary, outreach_hooks, email_subject, email_body, lead_score, score_tier, score_reasons, status, created_at",
       )
       .eq("campaign_id", campaign_id)
-      .order("created_at", { ascending: false })
+      .order("lead_score", { ascending: false, nullsFirst: false })
       .limit(limit);
     if (status) q = q.eq("status", status);
     const { data, error } = await q;

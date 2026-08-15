@@ -18,10 +18,10 @@ function Landing() {
             <span className="text-lg font-semibold tracking-tight">LeadForge</span>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/auth">
+            <Link to="/auth" search={{ next: undefined }}>
               <Button variant="ghost" size="sm">Sign in</Button>
             </Link>
-            <Link to="/auth">
+            <Link to="/auth" search={{ next: undefined }}>
               <Button size="sm">Get started</Button>
             </Link>
           </div>
