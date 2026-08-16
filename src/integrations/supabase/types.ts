@@ -222,9 +222,11 @@ export type Database = {
         Row: {
           address: string | null
           ai_summary: string | null
+          call_script: string | null
           campaign_id: string
           category: string | null
           created_at: string
+          drafts_updated_at: string | null
           email: string | null
           email_body: string | null
           email_subject: string | null
@@ -248,9 +250,11 @@ export type Database = {
         Insert: {
           address?: string | null
           ai_summary?: string | null
+          call_script?: string | null
           campaign_id: string
           category?: string | null
           created_at?: string
+          drafts_updated_at?: string | null
           email?: string | null
           email_body?: string | null
           email_subject?: string | null
@@ -274,9 +278,11 @@ export type Database = {
         Update: {
           address?: string | null
           ai_summary?: string | null
+          call_script?: string | null
           campaign_id?: string
           category?: string | null
           created_at?: string
+          drafts_updated_at?: string | null
           email?: string | null
           email_body?: string | null
           email_subject?: string | null
