@@ -265,7 +265,12 @@ export const saveLeadDrafts = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const patch: Record<string, string | null> = { drafts_updated_at: new Date().toISOString() };
+    const patch: {
+      drafts_updated_at: string;
+      email_subject?: string;
+      email_body?: string;
+      call_script?: string;
+    } = { drafts_updated_at: new Date().toISOString() };
     if (data.email_subject !== undefined) patch.email_subject = data.email_subject;
     if (data.email_body !== undefined) patch.email_body = data.email_body;
     if (data.call_script !== undefined) patch.call_script = data.call_script;
