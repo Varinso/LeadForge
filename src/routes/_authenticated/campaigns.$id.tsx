@@ -5,6 +5,8 @@ import {
   getCampaign,
   updateLeadStatus,
   generateLeadEmail,
+  generateLeadCallScript,
+  saveLeadDrafts,
   scoreCampaignLeads,
 } from "@/lib/campaigns.functions";
 import { ScoreBadge } from "@/components/score-badge";
@@ -29,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Download, Loader2, Mail, Phone, ExternalLink, Search, Copy, Sparkles, Send, PhoneCall, Gauge } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Mail, Phone, ExternalLink, Search, Copy, Sparkles, Send, PhoneCall, Gauge, Save, FileDown } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -48,6 +50,7 @@ type Lead = {
   outreach_hooks: string[] | null;
   email_subject: string | null;
   email_body: string | null;
+  call_script: string | null;
   status: string;
   ghl_contact_id: string | null;
   lead_score: number | null;
@@ -80,6 +83,8 @@ function CampaignDetail() {
   const fetchCampaign = useServerFn(getCampaign);
   const updateStatus = useServerFn(updateLeadStatus);
   const genEmail = useServerFn(generateLeadEmail);
+  const genScript = useServerFn(generateLeadCallScript);
+  const saveDrafts = useServerFn(saveLeadDrafts);
   const pushToGhl = useServerFn(syncLeadToGhl);
   const qc = useQueryClient();
   const [selected, setSelected] = useState<Lead | null>(null);
@@ -87,7 +92,10 @@ function CampaignDetail() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
+  const [callScript, setCallScript] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [generatingScript, setGeneratingScript] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [callLoading, setCallLoading] = useState(false);
   const [scoring, setScoring] = useState(false);
   const [tierFilter, setTierFilter] = useState<string>("all");
@@ -112,7 +120,82 @@ function CampaignDetail() {
   useEffect(() => {
     setEmailSubject(selected?.email_subject ?? "");
     setEmailBody(selected?.email_body ?? "");
+    setCallScript(selected?.call_script ?? "");
   }, [selected]);
+
+  async function handleGenerateScript() {
+    if (!selected) return;
+    setGeneratingScript(true);
+    try {
+      const res = await genScript({ data: { id: selected.id } });
+      setCallScript(res.call_script);
+      qc.invalidateQueries({ queryKey: ["campaign", id] });
+      toast.success("Call script generated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate call script");
+    } finally {
+      setGeneratingScript(false);
+    }
+  }
+
+  async function handleSaveDrafts() {
+    if (!selected) return;
+    setSaving(true);
+    try {
+      await saveDrafts({
+        data: {
+          id: selected.id,
+          email_subject: emailSubject,
+          email_body: emailBody,
+          call_script: callScript,
+        },
+      });
+      qc.invalidateQueries({ queryKey: ["campaign", id] });
+      toast.success("Drafts saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save drafts");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function downloadFile(name: string, text: string, type = "text/plain") {
+    const blob = new Blob([text], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportLeadDrafts() {
+    if (!selected) return;
+    const slug = selected.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    const text = [
+      selected.name,
+      selected.category ? `Category: ${selected.category}` : "",
+      selected.email ? `Email: ${selected.email}` : "",
+      selected.phone ? `Phone: ${selected.phone}` : "",
+      selected.website ? `Website: ${selected.website}` : "",
+      selected.lead_score !== null ? `Lead score: ${selected.lead_score} (${selected.score_tier ?? ""})` : "",
+      "",
+      "=== WHY THIS LEAD ===",
+      ...(selected.score_reasons ?? []).map((r) => `- ${r}`),
+      "",
+      "=== COLD EMAIL ===",
+      `Subject: ${emailSubject}`,
+      "",
+      emailBody,
+      "",
+      "=== CALL SCRIPT ===",
+      callScript,
+      "",
+    ]
+      .filter((l) => l !== "")
+      .join("\n");
+    downloadFile(`${slug}-outreach.txt`, text);
+  }
 
   async function handleGenerate() {
     if (!selected) return;
@@ -193,7 +276,19 @@ function CampaignDetail() {
   function exportCsv() {
     const leads = (query.data?.leads ?? []) as Lead[];
     const rows = [
-      ["Score", "Tier", "Name", "Phone", "Email", "Website", "Status", "AI Summary"],
+      [
+        "Score",
+        "Tier",
+        "Name",
+        "Phone",
+        "Email",
+        "Website",
+        "Status",
+        "AI Summary",
+        "Email Subject",
+        "Email Body",
+        "Call Script",
+      ],
       ...leads.map((l) => [
         l.lead_score ?? "",
         l.score_tier ?? "",
@@ -203,6 +298,9 @@ function CampaignDetail() {
         l.website ?? "",
         l.status,
         l.ai_summary ?? "",
+        l.email_subject ?? "",
+        l.email_body ?? "",
+        l.call_script ?? "",
       ]),
     ];
     const csv = rows
@@ -527,6 +625,65 @@ function CampaignDetail() {
                       {generating ? "Generating personalized draft…" : "No draft yet. Click Generate to create one."}
                     </p>
                   )}
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Cold call script
+                    </h4>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleGenerateScript}
+                      disabled={generatingScript}
+                      className="h-7 gap-1.5 text-xs"
+                    >
+                      {generatingScript ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3 w-3" />
+                      )}
+                      {callScript ? "Regenerate" : "Generate"}
+                    </Button>
+                  </div>
+                  {callScript ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={callScript}
+                        onChange={(e) => setCallScript(e.target.value)}
+                        rows={14}
+                        className="text-sm leading-relaxed"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(callScript);
+                          toast.success("Call script copied");
+                        }}
+                        className="gap-1.5"
+                      >
+                        <Copy className="h-3.5 w-3.5" /> Copy script
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                      {generatingScript
+                        ? "Writing a script from this lead's score reasons…"
+                        : "No script yet. Generate one built from this lead's score reasons."}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex gap-2 border-t border-border pt-4">
+                  <Button onClick={handleSaveDrafts} disabled={saving} className="gap-1.5">
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Save drafts
+                  </Button>
+                  <Button variant="outline" onClick={exportLeadDrafts} className="gap-1.5">
+                    <FileDown className="h-4 w-4" /> Export drafts
+                  </Button>
                 </div>
               </div>
             </>
