@@ -156,6 +156,7 @@ export const generateLeadEmail = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(lovableKey);
 
     const campaign = (lead as unknown as { campaigns: { niche: string; location: string } }).campaigns;
+    const reasons = Array.isArray(lead.score_reasons) ? (lead.score_reasons as string[]) : [];
 
     const { output } = await generateText({
       model: gateway("google/gemini-3-flash-preview"),
@@ -169,20 +170,114 @@ Website: ${lead.website ?? "n/a"}
 Category: ${lead.category ?? "n/a"}
 Location: ${campaign?.location ?? "n/a"}
 Context: ${lead.ai_summary ?? "n/a"}
+Lead score: ${lead.lead_score ?? "n/a"} (${lead.score_tier ?? "unscored"})
+Qualification reasons (why they scored this way — reference the concrete gaps here):
+${reasons.length ? reasons.map((r) => `- ${r}`).join("\n") : "- none available"}
 
 Return:
 - email_subject: short, specific, non-spammy (max 60 chars). No emojis, no ALL CAPS.
-- email_body: 90-140 words plain text. Structure: specific personalized opener referencing something real about ${lead.name}, one sentence naming a concrete SEO/marketing gap, one sentence on the outcome you'd deliver, then a soft CTA asking for a 15-min call. Sign off as "[Your name]". Use \\n for line breaks. Friendly, direct, no fluff.`,
+- email_body: 90-140 words plain text. Structure: specific personalized opener referencing something real about ${lead.name}, one sentence naming a concrete SEO/marketing gap drawn from the qualification reasons above, one sentence on the outcome you'd deliver, then a soft CTA asking for a 15-min call. Sign off as "[Your name]". Use \\n for line breaks. Friendly, direct, no fluff.`,
     });
 
     const { error: upErr } = await supabase
       .from("leads")
-      .update({ email_subject: output.email_subject, email_body: output.email_body })
+      .update({
+        email_subject: output.email_subject,
+        email_body: output.email_body,
+        drafts_updated_at: new Date().toISOString(),
+      })
       .eq("id", data.id)
       .eq("user_id", userId);
     if (upErr) throw new Error(upErr.message);
     return { email_subject: output.email_subject, email_body: output.email_body };
   });
+
+/** Generate a personalized phone call script grounded in the lead's score reasons. */
+export const generateLeadCallScript = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: lead, error } = await supabase
+      .from("leads")
+      .select("*, campaigns(niche, location)")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (error || !lead) throw new Error(error?.message ?? "Lead not found");
+
+    const lovableKey = process.env.LOVABLE_API_KEY;
+    if (!lovableKey) throw new Error("AI is not configured");
+
+    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
+    const { generateText, Output } = await import("ai");
+    const { z: zod } = await import("zod");
+    const gateway = createLovableAiGatewayProvider(lovableKey);
+
+    const campaign = (lead as unknown as { campaigns: { niche: string; location: string } }).campaigns;
+    const reasons = Array.isArray(lead.score_reasons) ? (lead.score_reasons as string[]) : [];
+
+    const { output } = await generateText({
+      model: gateway("google/gemini-3-flash-preview"),
+      output: Output.object({ schema: zod.object({ call_script: zod.string() }) }),
+      prompt: `Write a cold call script for a rep at a ${campaign?.niche ?? "digital marketing"} / SEO agency calling this prospect.
+
+Business: ${lead.name}
+Website: ${lead.website ?? "n/a"}
+Category: ${lead.category ?? "n/a"}
+Location: ${campaign?.location ?? "n/a"}
+Context: ${lead.ai_summary ?? "n/a"}
+Lead score: ${lead.lead_score ?? "n/a"} (${lead.score_tier ?? "unscored"})
+Qualification reasons (ground the pitch in these):
+${reasons.length ? reasons.map((r) => `- ${r}`).join("\n") : "- none available"}
+
+Return call_script as plain text (no markdown symbols) with these labelled sections, each on its own lines:
+OPENER: 2 sentences, permission-based, names ${lead.name} and a real observation.
+REASON FOR CALL: 1-2 sentences naming the concrete gap from the reasons above.
+DISCOVERY QUESTIONS: 3 short questions.
+OBJECTIONS: 3 lines in the form "If they say X -> respond Y" covering "we already have someone", "no budget", "send me an email".
+CLOSE: 1-2 sentences booking a 15-minute call.
+VOICEMAIL: 2 sentences under 20 seconds.
+Conversational, no jargon, no fake compliments. Use \\n for line breaks.`,
+    });
+
+    const { error: upErr } = await supabase
+      .from("leads")
+      .update({ call_script: output.call_script, drafts_updated_at: new Date().toISOString() })
+      .eq("id", data.id)
+      .eq("user_id", userId);
+    if (upErr) throw new Error(upErr.message);
+    return { call_script: output.call_script };
+  });
+
+/** Persist manually edited email / call-script drafts. */
+export const saveLeadDrafts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        email_subject: z.string().max(300).optional(),
+        email_body: z.string().max(20000).optional(),
+        call_script: z.string().max(20000).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const patch: Record<string, string | null> = { drafts_updated_at: new Date().toISOString() };
+    if (data.email_subject !== undefined) patch.email_subject = data.email_subject;
+    if (data.email_body !== undefined) patch.email_body = data.email_body;
+    if (data.call_script !== undefined) patch.call_script = data.call_script;
+    const { error } = await supabase
+      .from("leads")
+      .update(patch)
+      .eq("id", data.id)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 
 // Internal: background scrape+summarize. Uses service role to bypass RLS since
