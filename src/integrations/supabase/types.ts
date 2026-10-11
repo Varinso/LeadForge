@@ -340,6 +340,7 @@ export type Database = {
       user_email_settings: {
         Row: {
           created_at: string
+          from_email: string | null
           gmail_access_token: string | null
           gmail_email: string | null
           gmail_last_history_id: string | null
@@ -348,11 +349,16 @@ export type Database = {
           reply_to: string | null
           sender_name: string | null
           signature: string | null
+          smtp_host: string | null
+          smtp_password: string | null
+          smtp_port: number | null
+          smtp_user: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          from_email?: string | null
           gmail_access_token?: string | null
           gmail_email?: string | null
           gmail_last_history_id?: string | null
@@ -361,11 +367,16 @@ export type Database = {
           reply_to?: string | null
           sender_name?: string | null
           signature?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_user?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          from_email?: string | null
           gmail_access_token?: string | null
           gmail_email?: string | null
           gmail_last_history_id?: string | null
@@ -374,6 +385,10 @@ export type Database = {
           reply_to?: string | null
           sender_name?: string | null
           signature?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_user?: string | null
           updated_at?: string
           user_id?: string
         }
