@@ -616,11 +616,16 @@ function CampaignDetail() {
                           <Copy className="h-3.5 w-3.5" /> Copy
                         </Button>
                         {selected.email && (
-                          <Button size="sm" asChild className="gap-1.5">
+                          <Button size="sm" onClick={handleSendEmail} disabled={sending} className="gap-1.5">
+                            {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />} Send email
+                          </Button>
+                        )}
+                        {selected.email && (
+                          <Button size="sm" variant="outline" asChild className="gap-1.5">
                             <a
                               href={`mailto:${selected.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
                             >
-                              <Send className="h-3.5 w-3.5" /> Open in mail
+                              <Mail className="h-3.5 w-3.5" /> Open in mail
                             </a>
                           </Button>
                         )}
