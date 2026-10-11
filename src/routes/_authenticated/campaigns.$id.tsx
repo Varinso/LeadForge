@@ -56,6 +56,8 @@ type Lead = {
   lead_score: number | null;
   score_tier: string | null;
   score_reasons: string[] | null;
+  email_sent: boolean;
+  called: boolean;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -282,8 +284,10 @@ function CampaignDetail() {
         "Name",
         "Phone",
         "Email",
-        "Website",
+"Website",
         "Status",
+        "Email Sent",
+        "Called",
         "AI Summary",
         "Email Subject",
         "Email Body",
@@ -297,6 +301,8 @@ function CampaignDetail() {
         l.email ?? "",
         l.website ?? "",
         l.status,
+        l.email_sent ? "Yes" : "No",
+        l.called ? "Yes" : "No",
         l.ai_summary ?? "",
         l.email_subject ?? "",
         l.email_body ?? "",

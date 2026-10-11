@@ -65,7 +65,25 @@ export const getCampaign = createServerFn({ method: "GET" })
       .eq("campaign_id", data.id)
       .order("lead_score", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
-    return { campaign, leads: leads ?? [] };
+
+    // Per-lead outreach checklist: whether an email was sent and whether a call was logged.
+    const leadIds = (leads ?? []).map((l) => l.id);
+    const emailSentIds = new Set<string>();
+    const calledIds = new Set<string>();
+    if (leadIds.length > 0) {
+      const [{ data: sends }, { data: calls }] = await Promise.all([
+        supabase.from("email_sends").select("lead_id").in("lead_id", leadIds).eq("user_id", userId),
+        supabase.from("call_logs").select("lead_id").in("lead_id", leadIds).eq("user_id", userId),
+      ]);
+      for (const s of sends ?? []) emailSentIds.add(s.lead_id);
+      for (const c of calls ?? []) calledIds.add(c.lead_id);
+    }
+    const leadsWithFlags = (leads ?? []).map((l) => ({
+      ...l,
+      email_sent: emailSentIds.has(l.id),
+      called: calledIds.has(l.id),
+    }));
+    return { campaign, leads: leadsWithFlags };
   });
 
 export const deleteCampaign = createServerFn({ method: "POST" })
