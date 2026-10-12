@@ -295,37 +295,26 @@ function CampaignDetail() {
 
   function exportCsv() {
     const leads = (query.data?.leads ?? []) as Lead[];
+    const cityState = (addr: string | null) => {
+      const m = (addr ?? "").match(/,\s*([^,]+),\s*([A-Z]{2})\b/);
+      return m ? [m[1].trim(), m[2]] : ["", ""];
+    };
     const rows = [
       [
-        "Score",
-        "Tier",
-        "Name",
-        "Phone",
-        "Email",
-"Website",
-        "Status",
-        "Email Sent",
-        "Called",
-        "AI Summary",
-        "Email Subject",
-        "Email Body",
-        "Call Script",
+        "#", "First name", "Email Address", "Facebook ID", "Contact Number", "Office Address",
+        "City", "State", "Miscellaneous (Facebook/Website)", "Pipeline", "Opportunity name", "Tag",
+        "Score", "Tier", "Status", "Email Sent", "Called", "AI Summary", "Email Subject", "Email Body", "Call Script",
       ],
-      ...leads.map((l) => [
-        l.lead_score ?? "",
-        l.score_tier ?? "",
-        l.name,
-        l.phone ?? "",
-        l.email ?? "",
-        l.website ?? "",
-        l.status,
-        l.email_sent ? "Yes" : "No",
-        l.called ? "Yes" : "No",
-        l.ai_summary ?? "",
-        l.email_subject ?? "",
-        l.email_body ?? "",
-        l.call_script ?? "",
-      ]),
+      ...leads.map((l, i) => {
+        const [city, state] = cityState(l.address);
+        return [
+          i + 1, l.name, l.email ?? "", "", l.phone ?? "", l.address ?? "",
+          city, state, l.website ?? "", "Marketing Pipeline", l.name, l.category ?? "",
+          l.lead_score ?? "", l.score_tier ?? "", l.status,
+          l.email_sent ? "Yes" : "No", l.called ? "Yes" : "No",
+          l.ai_summary ?? "", l.email_subject ?? "", l.email_body ?? "", l.call_script ?? "",
+        ];
+      }),
     ];
     const csv = rows
       .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
