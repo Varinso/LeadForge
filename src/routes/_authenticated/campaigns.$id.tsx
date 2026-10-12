@@ -50,6 +50,7 @@ type Lead = {
   ai_summary: string | null;
   outreach_hooks: string[] | null;
   email_subject: string | null;
+  address?: string | null;
   email_body: string | null;
   call_script: string | null;
   status: string;
