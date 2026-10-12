@@ -14,12 +14,12 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedOutreachRouteImport } from './routes/_authenticated/outreach'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedCampaignsNewRouteImport } from './routes/_authenticated/campaigns.new'
-import { Route as AuthenticatedCampaignsImportRouteImport } from './routes/_authenticated/campaigns.import'
 import { Route as AuthenticatedCampaignsIdRouteImport } from './routes/_authenticated/campaigns.$id'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -46,6 +46,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOutreachRoute = AuthenticatedOutreachRouteImport.update({
+  id: '/outreach',
+  path: '/outreach',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -76,12 +81,6 @@ const AuthenticatedCampaignsNewRoute =
     path: '/campaigns/new',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedCampaignsImportRoute =
-  AuthenticatedCampaignsImportRouteImport.update({
-    id: '/campaigns/import',
-    path: '/campaigns/import',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedCampaignsIdRoute =
   AuthenticatedCampaignsIdRouteImport.update({
     id: '/campaigns/$id',
@@ -108,11 +107,11 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/outreach': typeof AuthenticatedOutreachRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/campaigns/$id': typeof AuthenticatedCampaignsIdRoute
-  '/campaigns/import': typeof AuthenticatedCampaignsImportRoute
   '/campaigns/new': typeof AuthenticatedCampaignsNewRoute
 }
 export interface FileRoutesByTo {
@@ -123,11 +122,11 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/outreach': typeof AuthenticatedOutreachRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/campaigns/$id': typeof AuthenticatedCampaignsIdRoute
-  '/campaigns/import': typeof AuthenticatedCampaignsImportRoute
   '/campaigns/new': typeof AuthenticatedCampaignsNewRoute
 }
 export interface FileRoutesById {
@@ -140,11 +139,11 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/outreach': typeof AuthenticatedOutreachRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/campaigns/$id': typeof AuthenticatedCampaignsIdRoute
-  '/_authenticated/campaigns/import': typeof AuthenticatedCampaignsImportRoute
   '/_authenticated/campaigns/new': typeof AuthenticatedCampaignsNewRoute
 }
 export interface FileRouteTypes {
@@ -157,11 +156,11 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/calendar'
     | '/dashboard'
+    | '/outreach'
     | '/settings'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/campaigns/$id'
-    | '/campaigns/import'
     | '/campaigns/new'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -172,11 +171,11 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/calendar'
     | '/dashboard'
+    | '/outreach'
     | '/settings'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/campaigns/$id'
-    | '/campaigns/import'
     | '/campaigns/new'
   id:
     | '__root__'
@@ -188,11 +187,11 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/calendar'
     | '/_authenticated/dashboard'
+    | '/_authenticated/outreach'
     | '/_authenticated/settings'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/campaigns/$id'
-    | '/_authenticated/campaigns/import'
     | '/_authenticated/campaigns/new'
   fileRoutesById: FileRoutesById
 }
@@ -244,6 +243,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/outreach': {
+      id: '/_authenticated/outreach'
+      path: '/outreach'
+      fullPath: '/outreach'
+      preLoaderRoute: typeof AuthenticatedOutreachRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -279,13 +285,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCampaignsNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/campaigns/import': {
-      id: '/_authenticated/campaigns/import'
-      path: '/campaigns/import'
-      fullPath: '/campaigns/import'
-      preLoaderRoute: typeof AuthenticatedCampaignsImportRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/campaigns/$id': {
       id: '/_authenticated/campaigns/$id'
       path: '/campaigns/$id'
@@ -313,18 +312,18 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedOutreachRoute: typeof AuthenticatedOutreachRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedCampaignsIdRoute: typeof AuthenticatedCampaignsIdRoute
-  AuthenticatedCampaignsImportRoute: typeof AuthenticatedCampaignsImportRoute
   AuthenticatedCampaignsNewRoute: typeof AuthenticatedCampaignsNewRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedOutreachRoute: AuthenticatedOutreachRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedCampaignsIdRoute: AuthenticatedCampaignsIdRoute,
-  AuthenticatedCampaignsImportRoute: AuthenticatedCampaignsImportRoute,
   AuthenticatedCampaignsNewRoute: AuthenticatedCampaignsNewRoute,
 }
 
