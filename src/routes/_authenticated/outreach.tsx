@@ -41,26 +41,27 @@ function parseCsv(text: string): string[][] {
 }
 
 const MAP: Record<keyof Row, string[]> = {
-  name: ["name", "company", "company name", "business", "business name", "title"],
-  email: ["email", "email address", "e-mail", "mail"],
-  phone: ["phone", "phone number", "telephone", "mobile", "number"],
-  website: ["website", "url", "site", "web"],
-  address: ["address", "location", "full address"],
-  category: ["category", "industry", "niche", "type"],
+  name: ["first name", "opportunity name", "name", "company", "company name", "business", "business name", "title"],
+  email: ["email address", "email", "email address", "e-mail", "mail"],
+  phone: ["contact number", "phone", "phone number", "telephone", "mobile", "number"],
+  website: ["miscellaneous (facebook/website)", "miscellaneous", "website", "url", "site", "web"],
+  address: ["office address", "address", "location", "full address"],
+  category: ["tag", "category", "industry", "niche", "type"],
 };
 
 function toRows(grid: string[][]): Row[] {
   const [head, ...body] = grid;
   if (!head) return [];
-  const h = head.map((x) => x.trim().toLowerCase());
+  const h = head.map((x) => x.replace(/\s+/g, " ").trim().toLowerCase());
+  const cityI = h.indexOf("city"), stateI = h.indexOf("state");
   const idx = Object.fromEntries(
     Object.entries(MAP).map(([k, names]) => [k, h.findIndex((x) => names.includes(x))]),
   ) as Record<keyof Row, number>;
-  if (idx.name < 0) throw new Error("CSV needs a 'Company name' or 'Name' column");
+  if (idx.name < 0) throw new Error("CSV needs a 'First name' (business name) column");
   return body
     .map((r) => {
       const get = (k: keyof Row) => (idx[k] >= 0 ? (r[idx[k]] ?? "").trim() : "");
-      return { name: get("name"), email: get("email"), phone: get("phone"), website: get("website"), address: get("address"), category: get("category") };
+      return { name: get("name"), email: get("email"), phone: get("phone"), website: get("website"), address: [get("address").startsWith("http") ? "" : get("address"), cityI >= 0 ? (r[cityI] ?? "").trim() : "", stateI >= 0 ? (r[stateI] ?? "").trim() : ""].filter(Boolean).join(", "), category: get("category") };
     })
     .filter((r) => r.name);
 }
@@ -103,7 +104,7 @@ function ImportPage() {
       <div className="mx-auto max-w-4xl p-8">
         <h1 className="text-2xl font-semibold tracking-tight">Upload &amp; Email</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Columns recognized: Company name, Email, Phone, Website, Address, Category.
+          Columns recognized: First name, Email Address, Contact Number, Office Address, City, State, Miscellaneous (Facebook/Website), Tag.
         </p>
         <div className="mt-8 space-y-5 rounded-xl border border-border bg-card p-6">
           <div className="space-y-1.5">
@@ -118,7 +119,7 @@ function ImportPage() {
             <div className="max-h-80 overflow-auto rounded-md border border-border">
               <table className="w-full text-sm">
                 <thead className="bg-muted text-left text-xs text-muted-foreground">
-                  <tr><th className="p-2">Company</th><th className="p-2">Email</th><th className="p-2">Phone</th><th className="p-2">Website</th></tr>
+                  <tr><th className="p-2">First name</th><th className="p-2">Email Address</th><th className="p-2">Contact Number</th><th className="p-2">Miscellaneous (Facebook/Website)</th></tr>
                 </thead>
                 <tbody>
                   {rows.slice(0, 50).map((r, i) => (
