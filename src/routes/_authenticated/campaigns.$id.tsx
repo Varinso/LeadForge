@@ -11,6 +11,7 @@ import {
 } from "@/lib/campaigns.functions";
 import { ScoreBadge } from "@/components/score-badge";
 import { syncLeadToGhl } from "@/lib/ghl.functions";
+import { sendLeadEmail } from "@/lib/email.functions";
 import { AppShell } from "@/components/app-shell";
 import { CallLogPanel } from "@/components/call-log-panel";
 import { Button } from "@/components/ui/button";
@@ -88,6 +89,8 @@ function CampaignDetail() {
   const genScript = useServerFn(generateLeadCallScript);
   const saveDrafts = useServerFn(saveLeadDrafts);
   const pushToGhl = useServerFn(syncLeadToGhl);
+  const sendEmail = useServerFn(sendLeadEmail);
+  const [sending, setSending] = useState(false);
   const qc = useQueryClient();
   const [selected, setSelected] = useState<Lead | null>(null);
   const [search, setSearch] = useState("");
@@ -212,6 +215,21 @@ function CampaignDetail() {
       toast.error(e instanceof Error ? e.message : "Failed to generate email");
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function handleSendEmail() {
+    if (!selected) return;
+    if (!emailSubject.trim() || !emailBody.trim()) return toast.error("Add a subject and body first");
+    setSending(true);
+    try {
+      await sendEmail({ data: { lead_id: selected.id, subject: emailSubject, body: emailBody } });
+      toast.success(`Email sent to ${selected.email}`);
+      qc.invalidateQueries({ queryKey: ["campaign"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Send failed");
+    } finally {
+      setSending(false);
     }
   }
 
