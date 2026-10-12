@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { getGhlSettings, saveGhlSettings } from "@/lib/ghl.functions";
 import { toast } from "sonner";
 import { Loader2, Phone } from "lucide-react";
-import { SmtpSettingsCard } from "@/components/smtp-settings-card";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -136,7 +135,6 @@ function SettingsPage() {
             </div>
           )}
         </div>
-        <SmtpSettingsCard />
       </div>
     </AppShell>
   );

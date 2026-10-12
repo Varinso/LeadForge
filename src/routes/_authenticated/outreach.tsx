@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { importLeadsCsv } from "@/lib/email.functions";
+import { SmtpSettingsCard } from "@/components/smtp-settings-card";
 import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/campaigns/import")({
-  head: () => ({ meta: [{ title: "Import leads from CSV — LeadForge" }] }),
+export const Route = createFileRoute("/_authenticated/outreach")({
+  head: () => ({ meta: [{ title: "Upload & Email — LeadForge" }] }),
   component: ImportPage,
 });
 
@@ -100,7 +101,7 @@ function ImportPage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-4xl p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Import leads from CSV</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Upload &amp; Email</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Columns recognized: Company name, Email, Phone, Website, Address, Category.
         </p>
@@ -135,6 +136,7 @@ function ImportPage() {
             Import {rows.length || ""} leads
           </Button>
         </div>
+        <SmtpSettingsCard />
       </div>
     </AppShell>
   );
