@@ -296,7 +296,7 @@ function CampaignDetail() {
 
   function exportCsv() {
     const leads = (query.data?.leads ?? []) as Lead[];
-    const cityState = (addr: string | null) => {
+    const cityState = (addr?: string | null) => {
       const m = (addr ?? "").match(/,\s*([^,]+),\s*([A-Z]{2})\b/);
       return m ? [m[1].trim(), m[2]] : ["", ""];
     };
