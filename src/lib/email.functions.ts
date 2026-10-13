@@ -171,3 +171,36 @@ export const importLeadsCsv = createServerFn({ method: "POST" })
     }
     return { id: camp.id, count: rows.length };
   });
+
+export const enrichCampaignEmails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ campaignId: z.string().uuid(), afterId: z.string().uuid().optional() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { findEmailForWebsite } = await import("./scrape.server");
+    let q = supabase
+      .from("leads")
+      .select("id, website")
+      .eq("campaign_id", data.campaignId)
+      .is("email", null)
+      .not("website", "is", null)
+      .order("id")
+      .limit(5);
+    if (data.afterId) q = q.gt("id", data.afterId);
+    const { data: leads, error } = await q;
+    if (error) throw new Error(error.message);
+    let found = 0;
+    await Promise.all(
+      (leads ?? []).map(async (l) => {
+        const email = await findEmailForWebsite(l.website!).catch(() => undefined);
+        if (email) {
+          found++;
+          await supabase.from("leads").update({ email }).eq("id", l.id);
+        }
+      }),
+    );
+    const last = leads?.[leads.length - 1]?.id;
+    return { processed: leads?.length ?? 0, found, lastId: last, done: (leads?.length ?? 0) < 5 };
+  });
