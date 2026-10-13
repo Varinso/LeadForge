@@ -151,3 +151,24 @@ export async function enrichBusiness(biz: ScrapedBusiness): Promise<ScrapedBusin
     about: biz.about ?? (data.metadata?.description || md.slice(0, 500)),
   };
 }
+
+/** Find a contact email for a business website by checking homepage + common contact pages. */
+export async function findEmailForWebsite(website: string): Promise<string | undefined> {
+  let base: URL;
+  try {
+    base = new URL(website.startsWith("http") ? website : `https://${website}`);
+  } catch {
+    return undefined;
+  }
+  if (/facebook\.com|instagram\.com|google\.com|maps\./i.test(base.hostname)) {
+    const d = await firecrawlScrape(base.toString()).catch(() => null);
+    return d?.markdown ? extractEmail(d.markdown) : undefined;
+  }
+  const paths = ["", "/contact", "/contact-us", "/about"];
+  for (const p of paths) {
+    const d = await firecrawlScrape(new URL(p || "/", base.origin).toString()).catch(() => null);
+    const e = d?.markdown ? extractEmail(d.markdown) : undefined;
+    if (e) return e;
+  }
+  return undefined;
+}
