@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { importLeadsCsv } from "@/lib/email.functions";
 import { SmtpSettingsCard } from "@/components/smtp-settings-card";
 import { toast } from "sonner";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, Download, Mail } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/outreach")({
   head: () => ({ meta: [{ title: "Upload & Email — LeadForge" }] }),
@@ -64,6 +65,98 @@ function toRows(grid: string[][]): Row[] {
       return { name: get("name"), email: get("email"), phone: get("phone"), website: get("website"), address: [get("address").startsWith("http") ? "" : get("address"), cityI >= 0 ? (r[cityI] ?? "").trim() : "", stateI >= 0 ? (r[stateI] ?? "").trim() : ""].filter(Boolean).join(", "), category: get("category") };
     })
     .filter((r) => r.name);
+}
+
+function extractColumns(emailText: string): string[] {
+  // Find candidate lines: prefer lines containing commas, else use all non-empty lines
+  const lines = emailText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const commaLines = lines.filter((l) => l.includes(","));
+  const source = commaLines.length ? commaLines : lines;
+  const cols: string[] = [];
+  for (const line of source) {
+    // Strip leading bullets / numbering like "- " or "1. "
+    const cleaned = line.replace(/^[-*•\d.)\s]+/, "");
+    for (const part of cleaned.split(",")) {
+      const name = part.trim().replace(/^["']|["']$/g, "");
+      if (name && !cols.some((c) => c.toLowerCase() === name.toLowerCase())) cols.push(name);
+    }
+  }
+  return cols;
+}
+
+function csvEscape(v: string): string {
+  return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+}
+
+function EmailToCsvCard() {
+  const [emailText, setEmailText] = useState("");
+  const [cols, setCols] = useState<string[]>([]);
+
+  async function onEmailFile(f: File | undefined) {
+    if (!f) return;
+    setEmailText(await f.text());
+  }
+
+  function parse() {
+    const c = extractColumns(emailText);
+    if (!c.length) {
+      toast.error("No column names found in the email text");
+      return;
+    }
+    setCols(c);
+    toast.success(`${c.length} columns found`);
+  }
+
+  function download() {
+    if (!cols.length) return;
+    const csv = cols.map(csvEscape).join(",") + "\n";
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "columns.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="mt-8 space-y-5 rounded-xl border border-border bg-card p-6">
+      <div className="flex items-center gap-2">
+        <Mail className="h-4 w-4 text-muted-foreground" />
+        <h2 className="font-medium">Email → CSV headers</h2>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Paste an email (or upload a .txt/.eml file) that lists the column names you want. We'll generate a CSV with those columns as the header row, in the same order.
+      </p>
+      <div className="space-y-1.5">
+        <Label htmlFor="email-file">Email file (optional)</Label>
+        <Input id="email-file" type="file" accept=".txt,.eml,text/plain" onChange={(e) => onEmailFile(e.target.files?.[0])} />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="email-text">Email content</Label>
+        <Textarea
+          id="email-text"
+          rows={6}
+          value={emailText}
+          onChange={(e) => setEmailText(e.target.value)}
+          placeholder={"Please create a CSV with the following columns:\nName, Email, SignupDate"}
+        />
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={parse} disabled={!emailText.trim()}>
+          Extract columns
+        </Button>
+        <Button onClick={download} disabled={!cols.length} className="gap-2">
+          <Download className="h-4 w-4" /> Download CSV
+        </Button>
+      </div>
+      {cols.length > 0 && (
+        <div className="rounded-md border border-border bg-muted/40 p-3">
+          <p className="mb-2 text-xs text-muted-foreground">Header row preview:</p>
+          <code className="block break-all text-sm">{cols.map(csvEscape).join(",")}</code>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ImportPage() {
@@ -137,6 +230,7 @@ function ImportPage() {
             Import {rows.length || ""} leads
           </Button>
         </div>
+        <EmailToCsvCard />
         <SmtpSettingsCard />
       </div>
     </AppShell>
