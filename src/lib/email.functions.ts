@@ -123,8 +123,8 @@ const CsvLead = z.object({
   name: z.string().min(1).max(300),
   email: z.string().max(255).nullable().optional(),
   phone: z.string().max(50).nullable().optional(),
-  website: z.string().max(500).nullable().optional(),
-  address: z.string().max(500).nullable().optional(),
+  website: z.string().max(2000).nullable().optional(),
+  address: z.string().max(2000).nullable().optional(),
   category: z.string().max(200).nullable().optional(),
 });
 
@@ -161,8 +161,8 @@ export const importLeadsCsv = createServerFn({ method: "POST" })
       name: l.name,
       email: l.email || null,
       phone: l.phone || null,
-      website: l.website || null,
-      address: l.address || null,
+      website: l.website ? l.website.slice(0, 1000) : null,
+      address: l.address ? l.address.slice(0, 1000) : null,
       category: l.category || null,
     }));
     for (let i = 0; i < rows.length; i += 500) {
