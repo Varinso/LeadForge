@@ -230,6 +230,7 @@ function ImportPage() {
             Import {rows.length || ""} leads
           </Button>
         </div>
+        <EmailToCsvCard />
         <SmtpSettingsCard />
       </div>
     </AppShell>
