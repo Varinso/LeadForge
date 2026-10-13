@@ -110,7 +110,7 @@ function CampaignDetail() {
   const [bulkSync, setBulkSync] = useState<{ done: number; total: number } | null>(null);
 
   async function handleBulkGhl() {
-    const all = ((data as { leads?: Lead[] } | undefined)?.leads ?? []) as (Lead & { ghl_contact_id?: string | null })[];
+    const all = ((qc.getQueryData(["campaign", id]) as { leads?: Lead[] } | undefined)?.leads ?? []) as (Lead & { ghl_contact_id?: string | null })[];
     const todo = all.filter((l) => !l.ghl_contact_id);
     if (!todo.length) return toast.info("All leads are already in GoHighLevel");
     let ok = 0, fail = 0, firstErr = "";
