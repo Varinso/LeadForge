@@ -107,6 +107,24 @@ function CampaignDetail() {
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"score" | "recent">("score");
   const runScoring = useServerFn(scoreCampaignLeads);
+  const [bulkSync, setBulkSync] = useState<{ done: number; total: number } | null>(null);
+
+  async function handleBulkGhl() {
+    const all = ((data as { leads?: Lead[] } | undefined)?.leads ?? []) as (Lead & { ghl_contact_id?: string | null })[];
+    const todo = all.filter((l) => !l.ghl_contact_id);
+    if (!todo.length) return toast.info("All leads are already in GoHighLevel");
+    let ok = 0, fail = 0, firstErr = "";
+    setBulkSync({ done: 0, total: todo.length });
+    for (let i = 0; i < todo.length; i++) {
+      try { await pushToGhl({ data: { lead_id: todo[i].id } }); ok++; }
+      catch (e) { fail++; if (!firstErr) firstErr = e instanceof Error ? e.message : String(e); if (/not configured/i.test(firstErr)) break; }
+      setBulkSync({ done: i + 1, total: todo.length });
+    }
+    setBulkSync(null);
+    qc.invalidateQueries({ queryKey: ["campaign", id] });
+    if (fail) toast.error(`Synced ${ok}, failed ${fail}: ${firstErr}`);
+    else toast.success(`Synced ${ok} leads to GoHighLevel`);
+  }
 
   async function handleScoreLeads(rescoreAll: boolean) {
     setScoring(true);
@@ -377,6 +395,10 @@ function CampaignDetail() {
                   <Gauge className="h-4 w-4" />
                 )}
                 Score leads
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleBulkGhl} disabled={bulkSync !== null} className="gap-2">
+                {bulkSync ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneCall className="h-4 w-4" />}
+                {bulkSync ? `Syncing ${bulkSync.done}/${bulkSync.total}` : "Sync all to GHL"}
               </Button>
               <Button variant="outline" size="sm" onClick={exportCsv} className="gap-2">
                 <Download className="h-4 w-4" /> Export CSV
