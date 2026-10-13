@@ -5,7 +5,8 @@ import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { importLeadsCsv } from "@/lib/email.functions";
+import { importLeadsCsv, enrichCampaignEmails } from "@/lib/email.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { SmtpSettingsCard } from "@/components/smtp-settings-card";
 import { toast } from "sonner";
 import { Loader2, Upload, Download, Mail } from "lucide-react";
@@ -165,6 +166,44 @@ function ImportPage() {
   const [name, setName] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+  const enrich = useServerFn(enrichCampaignEmails);
+  const [campId, setCampId] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ processed: number; found: number; done: boolean } | null>(null);
+
+  async function runEnrich(id: string) {
+    let afterId: string | undefined, processed = 0, found = 0;
+    setProgress({ processed, found, done: false });
+    try {
+      for (;;) {
+        const r = await enrich({ data: { campaignId: id, afterId } });
+        processed += r.processed; found += r.found;
+        setProgress({ processed, found, done: r.done });
+        if (r.done || !r.lastId) break;
+        afterId = r.lastId;
+      }
+      toast.success(`Email search done: found ${found} of ${processed}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Email search failed");
+      setProgress({ processed, found, done: true });
+    }
+  }
+
+  async function downloadEnriched() {
+    if (!campId) return;
+    const { data, error } = await supabase.from("leads").select("name,email,phone,address,website,category").eq("campaign_id", campId).order("created_at");
+    if (error) return toast.error(error.message);
+    const head = ["#", "First name", "Email Address", "Facebook ID", "Contact Number", "Office Address", "City", "State", "Miscellaneous (Facebook/Website)", "Pipeline", "Opportunity name", "Tag"];
+    const lines = (data ?? []).map((l, i) => {
+      const parts = (l.address ?? "").split(",").map((x) => x.trim());
+      const state = parts.length > 1 ? parts[parts.length - 1] : "";
+      const city = parts.length > 1 ? parts[parts.length - 2] : "";
+      return [String(i + 1), l.name, l.email ?? "", "", l.phone ?? "", l.address ?? "", city, state, l.website ?? "", "Marketing Pipeline", l.name, l.category ?? ""].map(csvEscape).join(",");
+    });
+    const url = URL.createObjectURL(new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = `${name || "leads"}-enriched.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function onFile(f: File | undefined) {
     if (!f) return;
@@ -183,8 +222,9 @@ function ImportPage() {
     setLoading(true);
     try {
       const res = await doImport({ data: { name, leads: rows } });
-      toast.success(`Imported ${res.count} leads`);
-      navigate({ to: "/campaigns/$id", params: { id: res.id } });
+      toast.success(`Imported ${res.count} leads — searching for missing emails…`);
+      setCampId(res.id);
+      void runEnrich(res.id);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Import failed");
     } finally {
@@ -229,6 +269,22 @@ function ImportPage() {
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             Import {rows.length || ""} leads
           </Button>
+          {campId && progress && (
+            <div className="space-y-3 rounded-md border border-border bg-muted/40 p-4">
+              <p className="flex items-center gap-2 text-sm">
+                {!progress.done && <Loader2 className="h-4 w-4 animate-spin" />}
+                {progress.done ? "Email search finished" : "Searching websites for emails…"} — checked {progress.processed}, found {progress.found}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={downloadEnriched} disabled={!progress.done} className="gap-2">
+                  <Download className="h-4 w-4" /> Download enriched CSV
+                </Button>
+                <Button variant="outline" onClick={() => navigate({ to: "/campaigns/$id", params: { id: campId } })}>
+                  Open campaign
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
         <EmailToCsvCard />
         <SmtpSettingsCard />
