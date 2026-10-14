@@ -7,6 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+
+const TARGETS = [
+  { id: "SEO", desc: "Rankings & Google visibility" },
+  { id: "Website redesign", desc: "Outdated or missing websites" },
+  { id: "Google Ads / PPC", desc: "Paid search campaigns" },
+  { id: "Social media", desc: "Facebook, Instagram presence" },
+  { id: "Reviews & reputation", desc: "Few or poor reviews" },
+  { id: "Local SEO / Maps", desc: "Google Business Profile" },
+];
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -22,12 +33,31 @@ function NewCampaign() {
   const [niche, setNiche] = useState("");
   const [location, setLocation] = useState("");
   const [maxLeads, setMaxLeads] = useState(15);
+  const [targets, setTargets] = useState<string[]>(["SEO"]);
+  const [notes, setNotes] = useState("");
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [emailSearch, setEmailSearch] = useState(true);
+  const [callScript, setCallScript] = useState(false);
+  const toggleTarget = (t: string) =>
+    setTargets((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await create({ data: { name, niche, location, max_leads: maxLeads } });
+      const res = await create({
+        data: {
+          name,
+          niche,
+          location,
+          max_leads: maxLeads,
+          targets,
+          target_notes: notes,
+          ai_enabled: aiEnabled,
+          email_search: emailSearch,
+          call_script: aiEnabled && callScript,
+        },
+      });
       toast.success("Campaign started — scraping in progress.");
       navigate({ to: "/campaigns/$id", params: { id: res.id } });
     } catch (e) {
@@ -95,6 +125,55 @@ function NewCampaign() {
             <p className="mt-2 text-xs text-muted-foreground">
               Scraping and AI summaries take about 3–5 seconds per lead.
             </p>
+          </div>
+
+          <div>
+            <Label>What are you selling?</Label>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Pick your services. Summaries, scores and emails will focus on these.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {TARGETS.map((t) => {
+                const on = targets.includes(t.id);
+                return (
+                  <button
+                    type="button"
+                    key={t.id}
+                    onClick={() => toggleTarget(t.id)}
+                    className={`rounded-lg border p-3 text-left transition-colors ${
+                      on ? "border-primary bg-primary/10" : "border-border hover:bg-muted/40"
+                    }`}
+                  >
+                    <div className="text-sm font-medium">{t.id}</div>
+                    <div className="text-xs text-muted-foreground">{t.desc}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <Textarea
+              className="mt-3"
+              rows={3}
+              placeholder="Describe your ideal customer, e.g. 'HVAC companies with old websites and under 50 reviews'"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <Label>What should we do for each lead?</Label>
+            {[
+              { label: "AI summary & email draft", desc: "Write a summary and a personalized cold email", v: aiEnabled, set: setAiEnabled, disabled: false },
+              { label: "Email search", desc: "Look through their website for a contact email", v: emailSearch, set: setEmailSearch, disabled: false },
+              { label: "Call script", desc: "Write a phone script for your calls", v: aiEnabled && callScript, set: setCallScript, disabled: !aiEnabled },
+            ].map((o) => (
+              <div key={o.label} className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-medium">{o.label}</div>
+                  <div className="text-xs text-muted-foreground">{o.desc}</div>
+                </div>
+                <Switch checked={o.v} disabled={o.disabled} onCheckedChange={o.set} />
+              </div>
+            ))}
           </div>
 
           <div className="flex justify-end gap-2 border-t border-border pt-4">
