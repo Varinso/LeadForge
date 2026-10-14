@@ -337,6 +337,7 @@ export const processCampaign = createServerFn({ method: "POST" })
       const lovableKey = process.env.LOVABLE_API_KEY;
       const gateway = lovableKey ? createLovableAiGatewayProvider(lovableKey) : null;
       const SummarySchema = zod.object({
+        business_name: zod.string(),
         summary: zod.string(),
         hooks: zod.array(zod.string()),
         email_subject: zod.string(),
@@ -362,13 +363,17 @@ Business: ${enriched.name}
 Website: ${enriched.website ?? "n/a"}
 Location context: ${campaign.location}
 Notes/about: ${enriched.about ?? "n/a"}
+Page title (browser tab): ${biz.name}
 
 Return:
+- business_name: the real company/brand name only (e.g. "Lone Star Fence Co."), NOT the SEO page title, slogan, or service keywords. Infer from the title, domain and notes.
 - summary: 3 concise sentences describing what they do, their likely digital-marketing pain points, and the SEO angle to pitch.
 - hooks: 3 short (max 15 words each) personalized cold-outreach opening lines.
 - email_subject: a short, specific, non-spammy subject line (max 60 chars). No emojis, no ALL CAPS, no "Re:".
 - email_body: a personalized cold email (90-140 words) in plain text. Structure: a specific personalized opener referencing something real about ${enriched.name}, one sentence naming a concrete SEO/marketing gap you noticed, one sentence on the outcome you'd deliver, then a soft CTA asking for a 15-min call. Sign off as "[Your name]". Use \\n for line breaks. Friendly, direct, no fluff, no fake compliments.`,
             });
+            const cleanName = output.business_name?.trim();
+            if (cleanName && cleanName.length <= 80) enriched.name = cleanName;
             ai_summary = output.summary;
             outreach_hooks = output.hooks;
             email_subject = output.email_subject;
