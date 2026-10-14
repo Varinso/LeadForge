@@ -80,6 +80,39 @@ function extractPhone(text: string): string | undefined {
   return matches?.[0];
 }
 
+const GENERIC_TITLE =
+  /^(home|homepage|welcome|about( us)?|contact( us)?|services?|index|official site|official website)$/i;
+const KEYWORDY =
+  /\b(best|top|rated|near me|services?|repair|installation|contractors?|companies|company in|in [A-Z][a-z]+|\d{1,2}\/7|affordable|cheap|free estimate)\b/i;
+
+function nameFromHost(host: string): string {
+  const base = host.split(".")[0].replace(/[-_]+/g, " ");
+  return base.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Pick the real brand name from a browser-tab title instead of the SEO headline. */
+export function guessBusinessName(title: string | undefined, host: string): string {
+  if (!title) return nameFromHost(host);
+  const parts = title
+    .split(/\s[|–—•:-]\s|\s?\|\s?/)
+    .map((p) => p.trim())
+    .filter((p) => p && !GENERIC_TITLE.test(p));
+  if (parts.length === 0) return nameFromHost(host);
+  const hostKey = host.split(".")[0].replace(/[^a-z0-9]/gi, "").toLowerCase();
+  // 1) segment that matches the domain
+  const domainMatch = parts.find((p) => {
+    const k = p.replace(/[^a-z0-9]/gi, "").toLowerCase();
+    return k.length > 2 && (hostKey.includes(k) || k.includes(hostKey));
+  });
+  if (domainMatch) return domainMatch;
+  // 2) short, non-keyword segment (brand names are usually short)
+  const brandish = parts
+    .filter((p) => !KEYWORDY.test(p) && p.split(/\s+/).length <= 6)
+    .sort((a, b) => a.length - b.length)[0];
+  if (brandish) return brandish;
+  return nameFromHost(host);
+}
+
 /**
  * Search for businesses via Firecrawl's web search (free tier friendly).
  * Uses general web queries + directory pages rather than scraping Google Maps directly.
@@ -121,7 +154,7 @@ export async function searchBusinesses(
 
       const searchSnippet = `${r.title ?? ""} ${r.description ?? ""} ${r.markdown ?? ""}`;
       businesses.push({
-        name: r.title?.split("|")[0].split(" - ")[0].trim() || host,
+        name: guessBusinessName(r.title, host),
         website: r.url,
         email: extractEmail(searchSnippet),
         phone: extractPhone(searchSnippet),
