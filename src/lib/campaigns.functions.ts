@@ -7,6 +7,11 @@ const CreateInput = z.object({
   niche: z.string().min(1).max(120),
   location: z.string().min(1).max(120),
   max_leads: z.number().int().min(5).max(50),
+  targets: z.array(z.string().max(40)).max(10).default([]),
+  target_notes: z.string().max(1000).default(""),
+  ai_enabled: z.boolean().default(true),
+  email_search: z.boolean().default(true),
+  call_script: z.boolean().default(false),
 });
 
 export const createCampaign = createServerFn({ method: "POST" })
@@ -28,7 +33,16 @@ export const createCampaign = createServerFn({ method: "POST" })
       .single();
     if (error || !campaign) throw new Error(error?.message ?? "Failed to create campaign");
     // Fire-and-forget scraping (don't await — the client polls campaign status)
-    processCampaign({ data: { campaignId: campaign.id } }).catch((e) => {
+    processCampaign({
+      data: {
+        campaignId: campaign.id,
+        targets: data.targets,
+        target_notes: data.target_notes,
+        ai_enabled: data.ai_enabled,
+        email_search: data.email_search,
+        call_script: data.call_script,
+      },
+    }).catch((e) => {
       console.error("processCampaign failed", e);
     });
     return { id: campaign.id as string };
@@ -305,12 +319,19 @@ export const saveLeadDrafts = createServerFn({ method: "POST" })
 
 // Internal: background scrape+summarize. Uses service role to bypass RLS since
 // this runs after fire-and-forget dispatch. Loaded lazily so client bundle stays clean.
-const ProcessInput = z.object({ campaignId: z.string().uuid() });
+const ProcessInput = z.object({
+  campaignId: z.string().uuid(),
+  targets: z.array(z.string()).default([]),
+  target_notes: z.string().default(""),
+  ai_enabled: z.boolean().default(true),
+  email_search: z.boolean().default(true),
+  call_script: z.boolean().default(false),
+});
 export const processCampaign = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ProcessInput.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { searchBusinesses, enrichBusiness } = await import("@/lib/scrape.server");
+    const { searchBusinesses, enrichBusiness, findEmailForWebsite } = await import("@/lib/scrape.server");
     const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
     const { generateText, Output } = await import("ai");
     const { z: zod } = await import("zod");
@@ -335,17 +356,23 @@ export const processCampaign = createServerFn({ method: "POST" })
       );
 
       const lovableKey = process.env.LOVABLE_API_KEY;
-      const gateway = lovableKey ? createLovableAiGatewayProvider(lovableKey) : null;
+      const gateway = lovableKey && data.ai_enabled ? createLovableAiGatewayProvider(lovableKey) : null;
+      const focus = data.targets.length ? data.targets.join(", ") : "general digital marketing";
       const SummarySchema = zod.object({
         business_name: zod.string(),
         summary: zod.string(),
         hooks: zod.array(zod.string()),
         email_subject: zod.string(),
         email_body: zod.string(),
+        call_script: zod.string().optional(),
       });
 
       for (const biz of businesses) {
         const enriched = await enrichBusiness(biz);
+        if (data.email_search && !enriched.email && enriched.website) {
+          enriched.email = await findEmailForWebsite(enriched.website).catch(() => undefined);
+        }
+        let call_script: string | null = null;
 
         let ai_summary: string | null = null;
         let outreach_hooks: string[] | null = null;
@@ -364,13 +391,16 @@ Website: ${enriched.website ?? "n/a"}
 Location context: ${campaign.location}
 Notes/about: ${enriched.about ?? "n/a"}
 Page title (browser tab): ${biz.name}
+What we are selling / targeting: ${focus}
+Ideal customer notes: ${data.target_notes || "n/a"}
+Focus the summary, hooks and email on these services specifically.
 
 Return:
 - business_name: the real company/brand name only (e.g. "Lone Star Fence Co."), NOT the SEO page title, slogan, or service keywords. Infer from the title, domain and notes.
 - summary: 3 concise sentences describing what they do, their likely digital-marketing pain points, and the SEO angle to pitch.
 - hooks: 3 short (max 15 words each) personalized cold-outreach opening lines.
 - email_subject: a short, specific, non-spammy subject line (max 60 chars). No emojis, no ALL CAPS, no "Re:".
-- email_body: a personalized cold email (90-140 words) in plain text. Structure: a specific personalized opener referencing something real about ${enriched.name}, one sentence naming a concrete SEO/marketing gap you noticed, one sentence on the outcome you'd deliver, then a soft CTA asking for a 15-min call. Sign off as "[Your name]". Use \\n for line breaks. Friendly, direct, no fluff, no fake compliments.`,
+- email_body: a personalized cold email (90-140 words) in plain text. Structure: a specific personalized opener referencing something real about ${enriched.name}, one sentence naming a concrete SEO/marketing gap you noticed, one sentence on the outcome you'd deliver, then a soft CTA asking for a 15-min call. Sign off as "[Your name]". Use \\n for line breaks. Friendly, direct, no fluff, no fake compliments.${data.call_script ? "\n- call_script: a short plain-text phone script (opener, reason for call, 3 discovery questions, close, voicemail). No markdown." : ""}`,
             });
             const cleanName = output.business_name?.trim();
             if (cleanName && cleanName.length <= 80) enriched.name = cleanName;
@@ -378,6 +408,7 @@ Return:
             outreach_hooks = output.hooks;
             email_subject = output.email_subject;
             email_body = output.email_body;
+            call_script = output.call_script ?? null;
           } catch (e) {
             console.error("AI summary failed for", enriched.name, e);
           }
@@ -423,6 +454,7 @@ Return:
           outreach_hooks,
           email_subject,
           email_body,
+          call_script,
           lead_score,
           score_tier,
           score_reasons,
