@@ -12,6 +12,9 @@ const CreateInput = z.object({
   ai_enabled: z.boolean().default(true),
   email_search: z.boolean().default(true),
   call_script: z.boolean().default(false),
+  require_website: z.boolean().default(false),
+  require_email: z.boolean().default(false),
+  require_phone: z.boolean().default(false),
 });
 
 export const createCampaign = createServerFn({ method: "POST" })
@@ -41,6 +44,9 @@ export const createCampaign = createServerFn({ method: "POST" })
         ai_enabled: data.ai_enabled,
         email_search: data.email_search,
         call_script: data.call_script,
+        require_website: data.require_website,
+        require_email: data.require_email,
+        require_phone: data.require_phone,
       },
     }).catch((e) => {
       console.error("processCampaign failed", e);
@@ -326,6 +332,9 @@ const ProcessInput = z.object({
   ai_enabled: z.boolean().default(true),
   email_search: z.boolean().default(true),
   call_script: z.boolean().default(false),
+  require_website: z.boolean().default(false),
+  require_email: z.boolean().default(false),
+  require_phone: z.boolean().default(false),
 });
 export const processCampaign = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ProcessInput.parse(input))
@@ -372,6 +381,10 @@ export const processCampaign = createServerFn({ method: "POST" })
         if (data.email_search && !enriched.email && enriched.website) {
           enriched.email = await findEmailForWebsite(enriched.website).catch(() => undefined);
         }
+        // Campaign "must have" filters — skip businesses that don't qualify.
+        if (data.require_website && !enriched.website) continue;
+        if (data.require_email && !enriched.email) continue;
+        if (data.require_phone && !enriched.phone) continue;
         let call_script: string | null = null;
 
         let ai_summary: string | null = null;

@@ -38,6 +38,9 @@ function NewCampaign() {
   const [aiEnabled, setAiEnabled] = useState(true);
   const [emailSearch, setEmailSearch] = useState(true);
   const [callScript, setCallScript] = useState(false);
+  const [reqWebsite, setReqWebsite] = useState(false);
+  const [reqEmail, setReqEmail] = useState(false);
+  const [reqPhone, setReqPhone] = useState(false);
   const toggleTarget = (t: string) =>
     setTargets((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
@@ -56,6 +59,9 @@ function NewCampaign() {
           ai_enabled: aiEnabled,
           email_search: emailSearch,
           call_script: aiEnabled && callScript,
+          require_website: reqWebsite,
+          require_email: reqEmail,
+          require_phone: reqPhone,
         },
       });
       toast.success("Campaign started — scraping in progress.");
@@ -172,6 +178,26 @@ function NewCampaign() {
                   <div className="text-xs text-muted-foreground">{o.desc}</div>
                 </div>
                 <Switch checked={o.v} disabled={o.disabled} onCheckedChange={o.set} />
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <Label>Lead filters</Label>
+            <p className="text-xs text-muted-foreground">
+              Only collect businesses that have these. Leads missing them are skipped entirely.
+            </p>
+            {[
+              { label: "Must have a website", desc: "Skip businesses with no site to audit or pitch", v: reqWebsite, set: setReqWebsite },
+              { label: "Must have an email", desc: "Only keep leads where we found a contact email", v: reqEmail, set: setReqEmail },
+              { label: "Must have a phone number", desc: "Only keep leads with a callable number", v: reqPhone, set: setReqPhone },
+            ].map((o) => (
+              <div key={o.label} className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-medium">{o.label}</div>
+                  <div className="text-xs text-muted-foreground">{o.desc}</div>
+                </div>
+                <Switch checked={o.v} onCheckedChange={o.set} />
               </div>
             ))}
           </div>
