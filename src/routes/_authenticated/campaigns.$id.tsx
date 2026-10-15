@@ -105,6 +105,8 @@ function CampaignDetail() {
   const [callLoading, setCallLoading] = useState(false);
   const [scoring, setScoring] = useState(false);
   const [tierFilter, setTierFilter] = useState<string>("all");
+  const [websiteFilter, setWebsiteFilter] = useState<string>("all");
+  const [emailFilter, setEmailFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"score" | "recent">("score");
   const runScoring = useServerFn(scoreCampaignLeads);
   const [bulkSync, setBulkSync] = useState<{ done: number; total: number } | null>(null);
@@ -287,6 +289,10 @@ function CampaignDetail() {
     const rows = leads.filter((l) => {
       if (statusFilter !== "all" && l.status !== statusFilter) return false;
       if (tierFilter !== "all" && (l.score_tier ?? "unscored") !== tierFilter) return false;
+      if (websiteFilter === "has" && !l.website) return false;
+      if (websiteFilter === "missing" && l.website) return false;
+      if (emailFilter === "has" && !l.email) return false;
+      if (emailFilter === "missing" && l.email) return false;
       if (search) {
         const q = search.toLowerCase();
         return (
@@ -301,7 +307,7 @@ function CampaignDetail() {
       rows.sort((a, b) => (b.lead_score ?? -1) - (a.lead_score ?? -1));
     }
     return rows;
-  }, [query.data, search, statusFilter, tierFilter, sortBy]);
+  }, [query.data, search, statusFilter, tierFilter, websiteFilter, emailFilter, sortBy]);
 
   async function changeStatus(lead: Lead, status: string) {
     try {
@@ -407,7 +413,7 @@ function CampaignDetail() {
           </div>
         )}
 
-        <div className="mb-4 flex gap-2">
+        <div className="mb-4 flex flex-wrap gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -448,6 +454,26 @@ function CampaignDetail() {
               {Object.entries(STATUS_LABELS).map(([k, v]) => (
                 <SelectItem key={k} value={k}>{v}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select value={websiteFilter} onValueChange={setWebsiteFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All websites</SelectItem>
+              <SelectItem value="has">Has website</SelectItem>
+              <SelectItem value="missing">No website</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={emailFilter} onValueChange={setEmailFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All emails</SelectItem>
+              <SelectItem value="has">Has email</SelectItem>
+              <SelectItem value="missing">No email</SelectItem>
             </SelectContent>
           </Select>
         </div>
